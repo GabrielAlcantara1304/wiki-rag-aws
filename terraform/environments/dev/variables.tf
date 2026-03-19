@@ -1,0 +1,47 @@
+variable "project"     { type = string; default = "wiki-rag" }
+variable "environment" { type = string; default = "dev" }
+variable "aws_region"  { type = string; default = "us-east-1" }
+
+variable "vpc_cidr" {
+  type    = string
+  default = "10.0.0.0/16"
+}
+
+variable "availability_zones" {
+  type    = list(string)
+  default = ["us-east-1a", "us-east-1b"]
+}
+
+variable "private_subnet_cidrs" {
+  type    = list(string)
+  default = ["10.0.1.0/24", "10.0.2.0/24"]
+}
+
+variable "public_subnet_cidrs" {
+  type    = list(string)
+  default = ["10.0.101.0/24", "10.0.102.0/24"]
+}
+
+variable "kubernetes_version" {
+  type    = string
+  default = "1.30"
+}
+
+variable "eks_node_instance_types" {
+  type    = list(string)
+  default = ["t3.medium"]
+}
+
+variable "eks_node_desired_size" { type = number; default = 2 }
+variable "eks_node_min_size"     { type = number; default = 1 }
+variable "eks_node_max_size"     { type = number; default = 3 }
+
+variable "rds_instance_class" {
+  type    = string
+  default = "db.t3.medium"
+}
+
+variable "db_password" {
+  type      = string
+  sensitive = true
+}

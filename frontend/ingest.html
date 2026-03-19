@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ayesa — Alimentar Base de Conhecimento</title>
+  <link rel="icon" type="image/png" href="logo.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0b0b18;
+      --sidebar: #0d0d20;
+      --surface: #13132a;
+      --border:  #1e1e3a;
+      --blue:    #3a3cf5;
+      --pink:    #e8187a;
+      --teal:    #00e5cc;
+      --green:   #00c896;
+      --text:    #f0f0ff;
+      --muted:   #6b6b8f;
+      --font:    'Barlow', sans-serif;
+      --display: 'Barlow Condensed', sans-serif;
+    }
+
+    html, body { height: 100%; font-family: var(--font); background: var(--bg); color: var(--text); }
+
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(58,60,245,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(58,60,245,.04) 1px, transparent 1px);
+      background-size: 40px 40px; pointer-events: none; z-index: 0;
+    }
+
+    .app {
+      position: relative; z-index: 1;
+      display: grid; grid-template-columns: 240px 1fr;
+      height: 100vh;
+    }
+
+    /* ── sidebar ── */
+    .sidebar {
+      background: var(--sidebar); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+      animation: slideInLeft .4s cubic-bezier(.22,1,.36,1) both;
+    }
+    @keyframes slideInLeft { from{opacity:0;transform:translateX(-14px)} to{opacity:1;transform:translateX(0)} }
+
+    .sidebar-top {
+      padding: 1rem .9rem .85rem;
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+
+    .logo { display: flex; align-items: center; margin-bottom: .85rem; }
+    .logo img { height: 26px; width: auto; object-fit: contain; }
+
+    .nav-link {
+      display: flex; align-items: center; gap: .55rem;
+      padding: .55em .75em; border-radius: 7px; font-size: .78rem;
+      color: var(--muted); text-decoration: none; transition: background .15s, color .15s;
+      margin-bottom: 2px;
+    }
+    .nav-link:hover { background: rgba(58,60,245,.08); color: var(--text); }
+    .nav-link.active { background: rgba(58,60,245,.14); color: var(--text); }
+    .nav-link svg { width: 14px; height: 14px; fill: currentColor; flex-shrink: 0; }
+
+    .sidebar-footer {
+      padding: .75rem .9rem; border-top: 1px solid var(--border);
+      flex-shrink: 0; margin-top: auto;
+    }
+    .status { display: flex; align-items: center; gap: .4rem; font-size: .63rem; color: var(--muted); }
+    .status-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--teal); box-shadow: 0 0 6px var(--teal);
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* ── main ── */
+    .main {
+      display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+      animation: fadeIn .4s .1s both;
+    }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+    header {
+      padding: .8rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(11,11,24,.85); backdrop-filter: blur(16px);
+      flex-shrink: 0;
+    }
+    .page-title {
+      font-family: var(--display); font-size: 1rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: .08em; color: var(--text);
+    }
+    .page-sub { font-size: .7rem; color: var(--muted); margin-top: .15rem; }
+
+    .content {
+      flex: 1; overflow-y: auto; padding: 2rem 1.5rem;
+      display: flex; flex-direction: column; gap: 1.5rem; align-items: center;
+    }
+    .content::-webkit-scrollbar { width: 4px; }
+    .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; overflow: hidden; width: 100%; max-width: 700px;
+    }
+
+    .card-header {
+      padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: .6rem;
+    }
+    .card-title {
+      font-family: var(--display); font-size: .8rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: .1em; color: var(--text);
+    }
+    .card-icon { width: 16px; height: 16px; fill: none; stroke: var(--blue); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .card-body { padding: 1.5rem; }
+
+    /* ── drop zone ── */
+    .dropzone {
+      border: 2px dashed var(--border); border-radius: 10px;
+      padding: 2.5rem 1rem; text-align: center;
+      cursor: pointer; transition: border-color .2s, background .2s;
+      position: relative;
+    }
+    .dropzone.dragover { border-color: var(--blue); background: rgba(58,60,245,.05); }
+    .dropzone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .dropzone-icon { display: flex; justify-content: center; margin-bottom: .75rem; }
+    .dropzone-icon svg { width: 36px; height: 36px; fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+    .dropzone-text { font-size: .85rem; color: var(--text); font-weight: 500; }
+    .dropzone-hint { font-size: .72rem; color: var(--muted); margin-top: .35rem; }
+
+    /* ── file list ── */
+    .file-list { display: flex; flex-direction: column; gap: .4rem; margin-top: 1rem; }
+    .file-item {
+      display: flex; align-items: center; gap: .6rem;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: .5rem .85rem; font-size: .78rem;
+    }
+    .file-item svg { width: 14px; height: 14px; fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-size { color: var(--muted); font-size: .68rem; flex-shrink: 0; }
+    .file-remove {
+      background: none; border: none; color: var(--muted); cursor: pointer;
+      font-size: .9rem; padding: 0 .2rem; transition: color .15s; line-height: 1;
+    }
+    .file-remove:hover { color: var(--pink); }
+
+    /* ── git input ── */
+    .git-row { display: flex; gap: .6rem; }
+    .git-input {
+      flex: 1; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: .6rem 1rem; font-family: var(--font);
+      font-size: .82rem; color: var(--text); outline: none;
+      transition: border-color .2s;
+    }
+    .git-input::placeholder { color: var(--muted); }
+    .git-input:focus { border-color: var(--blue); }
+
+    /* ── buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: .45rem;
+      padding: .6em 1.2em; border-radius: 8px; border: none;
+      font-family: var(--font); font-size: .8rem; font-weight: 500;
+      cursor: pointer; transition: all .15s; white-space: nowrap;
+    }
+    .btn-primary { background: var(--pink); color: #fff; }
+    .btn-primary:hover { background: #ff2a90; box-shadow: 0 0 14px rgba(232,24,122,.35); }
+    .btn-primary:disabled { background: var(--muted); cursor: not-allowed; box-shadow: none; }
+    .btn-secondary {
+      background: rgba(58,60,245,.1); border: 1px solid rgba(58,60,245,.25);
+      color: var(--text);
+    }
+    .btn-secondary:hover { background: rgba(58,60,245,.18); }
+    .btn svg { width: 14px; height: 14px; fill: currentColor; }
+
+    /* ── gaps panel ── */
+    .gap-item {
+      padding: .85rem 1rem; border-bottom: 1px solid var(--border);
+      display: grid; grid-template-columns: 1fr auto;
+      gap: .3rem .75rem; align-items: start;
+      transition: background .15s;
+    }
+    .gap-item:last-child { border-bottom: none; }
+    .gap-item:hover { background: rgba(58,60,245,.03); }
+
+    .gap-question { font-size: .82rem; color: var(--text); line-height: 1.4; }
+    .gap-meta { font-size: .65rem; color: var(--muted); margin-top: .2rem; }
+
+    .gap-sim {
+      font-size: .63rem; padding: .2em .55em; border-radius: 4px;
+      font-weight: 600; white-space: nowrap;
+    }
+    .gap-sim.low  { background: rgba(245,158,11,.12); color: #f59e0b; }
+    .gap-sim.manual { background: rgba(232,24,122,.12); color: var(--pink); }
+
+    .gap-resolve {
+      background: none; border: 1px solid var(--border);
+      color: var(--muted); font-family: var(--font); font-size: .65rem;
+      padding: .25em .65em; border-radius: 5px; cursor: pointer;
+      transition: all .15s; grid-column: 2; align-self: center;
+    }
+    .gap-resolve:hover { border-color: var(--teal); color: var(--teal); }
+
+    .gaps-empty { text-align: center; color: var(--muted); font-size: .78rem; padding: 2rem 1rem; }
+
+    .badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 18px; height: 18px; border-radius: 9px; padding: 0 5px;
+      font-size: .6rem; font-weight: 700; background: var(--pink); color: #fff;
+      margin-left: .4rem;
+    }
+
+    /* ── result ── */
+    .result-box {
+      border-radius: 10px; padding: 1rem 1.25rem;
+      font-size: .82rem; line-height: 1.6; display: none;
+    }
+    .result-box.success {
+      display: block; background: rgba(0,200,150,.07);
+      border: 1px solid rgba(0,200,150,.25); color: var(--green);
+    }
+    .result-box.error {
+      display: block; background: rgba(232,24,122,.07);
+      border: 1px solid rgba(232,24,122,.25); color: var(--pink);
+    }
+    .result-box.loading {
+      display: flex; align-items: center; gap: .75rem;
+      background: rgba(58,60,245,.07); border: 1px solid rgba(58,60,245,.2);
+      color: var(--muted);
+    }
+
+    .result-stats {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: .5rem; margin-top: .75rem;
+    }
+    .stat { text-align: center; }
+    .stat-val { font-family: var(--display); font-size: 1.4rem; font-weight: 800; color: var(--teal); }
+    .stat-label { font-size: .65rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+
+    /* loading spinner */
+    .spinner {
+      width: 16px; height: 16px; border: 2px solid rgba(58,60,245,.3);
+      border-top-color: var(--blue); border-radius: 50%;
+      animation: spin .7s linear infinite; flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* force-all toggle */
+    .toggle-row { display: flex; align-items: center; gap: .6rem; margin-top: .75rem; }
+    .toggle-row label { font-size: .75rem; color: var(--muted); cursor: pointer; user-select: none; }
+    input[type=checkbox] { accent-color: var(--blue); width: 14px; height: 14px; cursor: pointer; }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div class="logo">
+        <img src="Ayesa.png" alt="Ayesa" />
+      </div>
+      <a href="/ui" class="nav-link">
+        <svg style="width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Perguntar
+      </a>
+      <a href="/ui/ingest.html" class="nav-link active">
+        <svg style="width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Alimentar base
+      </a>
+    </div>
+    <div class="sidebar-footer">
+      <div class="status"><div class="status-dot"></div> online</div>
+    </div>
+  </aside>
+
+  <!-- main -->
+  <div class="main">
+    <header>
+      <div class="page-title">Alimentar base de conhecimento</div>
+      <div class="page-sub">Adicione documentos .md ou .docx, ou conecte um repositório Git</div>
+    </header>
+
+    <div class="content">
+
+      <!-- upload de arquivos -->
+      <div class="card">
+        <div class="card-header">
+          <svg class="card-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span class="card-title">Upload de arquivos</span>
+        </div>
+        <div class="card-body">
+          <div class="dropzone" id="dropzone">
+            <input type="file" id="fileInput" multiple accept=".md,.docx,.txt" />
+            <div class="dropzone-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+            <div class="dropzone-text">Arraste arquivos aqui ou clique para selecionar</div>
+            <div class="dropzone-hint">Suporta .md, .docx e .txt · Múltiplos arquivos permitidos</div>
+          </div>
+
+          <div class="file-list" id="fileList"></div>
+
+          <div class="toggle-row" style="margin-top:1rem">
+            <input type="checkbox" id="forceUpload" />
+            <label for="forceUpload">Forçar re-ingestão (ignorar cache)</label>
+          </div>
+
+          <div style="margin-top:1rem;display:flex;justify-content:flex-end">
+            <button class="btn btn-primary" id="uploadBtn" disabled>
+              <svg style="width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Enviar e ingerir
+            </button>
+          </div>
+
+          <div class="result-box" id="uploadResult"></div>
+        </div>
+      </div>
+
+      <!-- pasta local -->
+      <div class="card">
+        <div class="card-header">
+          <svg class="card-icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span class="card-title">Pasta local (servidor)</span>
+        </div>
+        <div class="card-body">
+          <div class="git-row">
+            <input type="text" class="git-input" id="localPath"
+              placeholder="/app/documentosprocedimento" />
+            <button class="btn btn-primary" id="localBtn">
+              <svg style="width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+              Ingerir
+            </button>
+          </div>
+          <div class="toggle-row">
+            <input type="checkbox" id="forceLocal" />
+            <label for="forceLocal">Forçar re-ingestão completa</label>
+          </div>
+          <div class="result-box" id="localResult" style="margin-top:1rem"></div>
+        </div>
+      </div>
+
+      <!-- lacunas de conhecimento -->
+      <div class="card">
+        <div class="card-header" style="justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:.6rem">
+            <svg class="card-icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span class="card-title">Lacunas de conhecimento <span class="badge" id="gapBadge" style="display:none"></span></span>
+          </div>
+          <button class="btn btn-secondary" id="refreshGaps" style="font-size:.68rem;padding:.35em .8em">
+            <svg style="width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Atualizar
+          </button>
+        </div>
+        <div id="gapsList"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  const API = 'http://localhost:8001';
+
+  // ── Upload de arquivos ─────────────────────────────────────────────────────
+  const dropzone   = document.getElementById('dropzone');
+  const fileInput  = document.getElementById('fileInput');
+  const fileList   = document.getElementById('fileList');
+  const uploadBtn  = document.getElementById('uploadBtn');
+  const uploadResult = document.getElementById('uploadResult');
+
+  let selectedFiles = [];
+
+  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault(); dropzone.classList.remove('dragover');
+    addFiles([...e.dataTransfer.files]);
+  });
+  fileInput.addEventListener('change', () => addFiles([...fileInput.files]));
+
+  function addFiles(files) {
+    files.forEach(f => {
+      const ext = f.name.split('.').pop().toLowerCase();
+      if (!['md','docx','txt'].includes(ext)) return;
+      if (selectedFiles.find(x => x.name === f.name)) return;
+      selectedFiles.push(f);
+    });
+    renderFileList();
+  }
+
+  function renderFileList() {
+    fileList.innerHTML = '';
+    selectedFiles.forEach((f, i) => {
+      const item = document.createElement('div');
+      item.className = 'file-item';
+      item.innerHTML = `
+        <svg viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+        <span class="file-name">${escHtml(f.name)}</span>
+        <span class="file-size">${(f.size/1024).toFixed(0)} KB</span>
+        <button class="file-remove" data-i="${i}">✕</button>
+      `;
+      fileList.appendChild(item);
+    });
+    fileList.querySelectorAll('.file-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedFiles.splice(+btn.dataset.i, 1);
+        renderFileList();
+      });
+    });
+    uploadBtn.disabled = selectedFiles.length === 0;
+  }
+
+  uploadBtn.addEventListener('click', async () => {
+    if (!selectedFiles.length) return;
+    uploadBtn.disabled = true;
+    showLoading(uploadResult, 'Enviando e processando arquivos…');
+
+    const fd = new FormData();
+    selectedFiles.forEach(f => fd.append('files', f));
+
+    try {
+      const res = await fetch(`${API}/upload`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+      showSuccess(uploadResult, data);
+      selectedFiles = [];
+      renderFileList();
+    } catch (err) {
+      showError(uploadResult, err.message);
+    } finally {
+      uploadBtn.disabled = false;
+    }
+  });
+
+  // ── Pasta local ───────────────────────────────────────────────────────────
+  document.getElementById('localBtn').addEventListener('click', async () => {
+    const path = document.getElementById('localPath').value.trim();
+    if (!path) return;
+    const btn = document.getElementById('localBtn');
+    const result = document.getElementById('localResult');
+    btn.disabled = true;
+    showLoading(result, 'Processando pasta…');
+    try {
+      const res = await fetch(`${API}/ingest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ local_path: path, force_all: document.getElementById('forceLocal').checked }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+      showSuccess(result, data);
+    } catch (err) {
+      showError(result, err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function showLoading(el, msg) {
+    el.className = 'result-box loading';
+    el.innerHTML = `<div class="spinner"></div><span>${msg}</span>`;
+  }
+
+  function showSuccess(el, data) {
+    el.className = 'result-box success';
+    el.innerHTML = `
+      <strong>✓ ${data.message}</strong>
+      <div class="result-stats">
+        <div class="stat"><div class="stat-val">${data.processed}</div><div class="stat-label">Processados</div></div>
+        <div class="stat"><div class="stat-val">${data.skipped}</div><div class="stat-label">Ignorados</div></div>
+        <div class="stat"><div class="stat-val">${data.failed}</div><div class="stat-label">Erros</div></div>
+      </div>
+    `;
+  }
+
+  function showError(el, msg) {
+    el.className = 'result-box error';
+    el.innerHTML = `<strong>✗ Erro:</strong> ${escHtml(msg)}`;
+  }
+
+  function escHtml(s) {
+    return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── Lacunas de conhecimento ───────────────────────────────────────────────
+  const gapsList   = document.getElementById('gapsList');
+  const gapBadge   = document.getElementById('gapBadge');
+  const refreshBtn = document.getElementById('refreshGaps');
+
+  async function loadGaps() {
+    gapsList.innerHTML = '<div class="gaps-empty">Carregando…</div>';
+    try {
+      const res = await fetch(`${API}/gaps`);
+      const data = await res.json();
+      renderGaps(data.gaps);
+    } catch(e) {
+      gapsList.innerHTML = '<div class="gaps-empty">Erro ao carregar lacunas.</div>';
+    }
+  }
+
+  function renderGaps(gaps) {
+    if (!gaps.length) {
+      gapBadge.style.display = 'none';
+      gapsList.innerHTML = '<div class="gaps-empty">Nenhuma lacuna aberta. A base está bem coberta.</div>';
+      return;
+    }
+    gapBadge.style.display = 'inline-flex';
+    gapBadge.textContent = gaps.length;
+    gapsList.innerHTML = '';
+    gaps.forEach(g => {
+      const div = document.createElement('div');
+      div.className = 'gap-item';
+      const isManual = g.source === 'manual';
+      const simLabel = isManual ? 'feedback' : `sim: ${g.max_similarity != null ? (g.max_similarity*100).toFixed(0)+'%' : '—'}`;
+      const simClass = isManual ? 'manual' : 'low';
+      const date = new Date(g.detected_at).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+      div.innerHTML = `
+        <div>
+          <div class="gap-question">${escHtml(g.question)}</div>
+          <div class="gap-meta">${date}</div>
+        </div>
+        <span class="gap-sim ${simClass}">${simLabel}</span>
+        <button class="gap-resolve" data-id="${g.id}">Marcar resolvida</button>
+      `;
+      div.querySelector('.gap-resolve').addEventListener('click', async function() {
+        this.disabled = true; this.textContent = '…';
+        try {
+          await fetch(`${API}/gaps/${g.id}/resolve`, { method: 'POST' });
+          div.remove();
+          const remaining = gapsList.querySelectorAll('.gap-item').length;
+          if (!remaining) renderGaps([]);
+          else { gapBadge.textContent = remaining; }
+        } catch(_) { this.disabled = false; this.textContent = 'Marcar resolvida'; }
+      });
+      gapsList.appendChild(div);
+    });
+  }
+
+  refreshBtn.addEventListener('click', loadGaps);
+  loadGaps();
+</script>
+</body>
+</html>

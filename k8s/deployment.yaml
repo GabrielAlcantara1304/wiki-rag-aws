@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wiki-rag
+  namespace: wiki-rag
+  labels:
+    app: wiki-rag
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: wiki-rag
+  template:
+    metadata:
+      labels:
+        app: wiki-rag
+    spec:
+      serviceAccountName: wiki-rag  # IRSA — grants Bedrock access via the annotated role
+
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      containers:
+        - name: api
+          # Replace with your ECR repository URL after first terraform apply
+          image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/wiki-rag-api:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+
+          envFrom:
+            - configMapRef:
+                name: wiki-rag-config
+            - secretRef:
+                name: wiki-rag-secret
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+
+      volumes:
+        - name: tmp
+          emptyDir: {}
+
+      terminationGracePeriodSeconds: 30

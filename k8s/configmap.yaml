@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wiki-rag-config
+  namespace: wiki-rag
+data:
+  APP_ENV: "production"
+  LOG_LEVEL: "INFO"
+  AWS_REGION: "us-east-1"
+  BEDROCK_LLM_MODEL: "anthropic.claude-3-haiku-20240307-v1:0"
+  BEDROCK_EMBED_MODEL: "amazon.titan-embed-text-v2:0"
+  BEDROCK_EMBED_DIMENSIONS: "1024"
+  WIKI_CLONE_DIR: "/tmp/wiki_clones"

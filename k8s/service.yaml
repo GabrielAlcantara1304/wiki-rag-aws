@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: wiki-rag
+  namespace: wiki-rag
+spec:
+  selector:
+    app: wiki-rag
+  ports:
+    - port: 80
+      targetPort: 8000
+      protocol: TCP
+  type: ClusterIP

@@ -1,0 +1,45 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: wiki_rag_db
+    environment:
+      POSTGRES_DB: wiki_rag
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d wiki_rag"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wiki_rag_api
+    ports:
+      - "8001:8000"
+    env_file:
+      - .env
+    environment:
+      # Override DB URLs to point to the docker service
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/wiki_rag
+      DATABASE_URL_SYNC: postgresql://postgres:postgres@db:5432/wiki_rag
+      WIKI_CLONE_DIR: /tmp/wiki_repos
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - wiki_repos:/tmp/wiki_repos
+      - ./frontend:/app/frontend:ro
+      - ./documentosprocedimento:/app/documentosprocedimento:ro
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  wiki_repos:

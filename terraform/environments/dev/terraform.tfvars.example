@@ -1,0 +1,15 @@
+# Copy this file to terraform.tfvars and fill in your values.
+# terraform.tfvars is gitignored — never commit real values.
+
+project     = "wiki-rag"
+environment = "dev"
+aws_region  = "us-east-1"
+
+# Use a strong password — store the real value in Secrets Manager
+db_password = "CHANGE_ME_strong_password_here"
+
+# Reduce costs for POC: single node
+eks_node_desired_size = 1
+eks_node_min_size     = 1
+eks_node_max_size     = 2
+rds_instance_class    = "db.t3.micro"

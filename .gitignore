@@ -1,0 +1,61 @@
+# Secrets — nunca commitar
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+env/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Logs
+*.log
+api.log
+
+# Wiki clones e wikis embutidas (dados gerados em runtime)
+wiki_clones/
+aws_documentation.wiki/
+*.wiki/
+
+# Arquivos de debug gerados localmente
+chunks_debug.txt
+dupes_debug.txt
+lz_docs.txt
+intro_debug.txt
+ingest_result.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Terraform
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+*.tfvars
+!*.tfvars.example
+terraform.tfplan
+
+# Docker volumes locais
+.docker/
+
+# Alembic — manter migrations mas ignorar pycache
+alembic/versions/__pycache__/
