@@ -45,3 +45,13 @@ variable "db_password" {
   type      = string
   sensitive = true
 }
+
+variable "db_username" {
+  type    = string
+  default = "wiki_rag"
+}
+
+variable "db_name" {
+  type    = string
+  default = "wiki_rag"
+}

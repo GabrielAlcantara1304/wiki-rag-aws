@@ -90,3 +90,17 @@ module "iam" {
   oidc_provider_url  = module.eks.oidc_provider_url
   tags               = local.common_tags
 }
+
+# ── Secrets Manager ──────────────────────────────────────────────────────────
+module "secrets" {
+  source = "../../modules/secrets"
+
+  name        = "${local.name}/app"
+  description = "wiki-rag application secrets (DB credentials)"
+  tags        = local.common_tags
+
+  secret_values = {
+    database_url      = "postgresql+asyncpg://${var.db_username}:${var.db_password}@${module.rds.endpoint}/${var.db_name}"
+    database_url_sync = "postgresql://${var.db_username}:${var.db_password}@${module.rds.endpoint}/${var.db_name}"
+  }
+}

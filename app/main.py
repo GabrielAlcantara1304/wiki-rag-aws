@@ -9,11 +9,19 @@ Registers:
 """
 
 import logging
+import os
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+
+# Load secrets from AWS Secrets Manager BEFORE importing settings.
+# This injects secret values as env vars so pydantic-settings picks them up.
+_secret_name = os.environ.get("AWS_SECRET_NAME", "")
+if _secret_name:
+    from app.aws.secrets import load_secrets_into_env
+    load_secrets_into_env(_secret_name, os.environ.get("AWS_REGION", "us-east-1"))
 
 from app.api.routes import ask, gaps, ingest, upload
 from app.api.schemas import HealthResponse
@@ -56,8 +64,8 @@ def create_app() -> FastAPI:
     @app.on_event("startup")
     async def startup() -> None:
         logger.info(
-            "Wiki RAG API starting (env=%s, model=%s)",
-            settings.app_env, settings.openai_chat_model,
+            "Wiki RAG API starting (env=%s, llm=%s, embed=%s)",
+            settings.app_env, settings.bedrock_llm_model, settings.bedrock_embed_model,
         )
 
     @app.on_event("shutdown")

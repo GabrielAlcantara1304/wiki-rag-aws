@@ -11,3 +11,5 @@ data:
   BEDROCK_EMBED_MODEL: "amazon.titan-embed-text-v2:0"
   BEDROCK_EMBED_DIMENSIONS: "1024"
   WIKI_CLONE_DIR: "/tmp/wiki_clones"
+  # Terraform output secret_name goes here — app fetches DB credentials at startup
+  AWS_SECRET_NAME: "wiki-rag-dev/app"
