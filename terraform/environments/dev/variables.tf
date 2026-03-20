@@ -56,12 +56,6 @@ variable "db_name" {
   default = "wiki_rag"
 }
 
-variable "openai_api_key" {
-  type      = string
-  sensitive = true
-  description = "OpenAI API key — stored in Secrets Manager, never in state plaintext"
-}
-
 variable "github_org" {
   type        = string
   description = "GitHub organization or username owning the repo"
