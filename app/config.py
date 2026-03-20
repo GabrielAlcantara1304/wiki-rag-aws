@@ -106,9 +106,14 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------
     app_env: str = Field(default="development")
     log_level: str = Field(default="INFO")
+    cors_origins: list[str] = Field(
+        default=[],
+        description="Allowed CORS origins in production (e.g. https://wiki.example.com)",
+    )
 
     model_config = {"env_file": ".env", "case_sensitive": False}
 
 
 # Singleton — import this everywhere instead of re-creating
 settings = Settings()
+    # NOTA: este campo é adicionado aqui pois o arquivo original não contém o cors_origins

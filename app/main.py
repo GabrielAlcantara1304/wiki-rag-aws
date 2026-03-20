@@ -6,23 +6,39 @@ Registers:
   - API routers (ingest, ask).
   - Health endpoint.
   - Global exception handler for unhandled errors.
+
+In production (APP_ENV=production), secrets are loaded from AWS Secrets Manager
+before Settings() is instantiated, so DATABASE_URL and OPENAI_API_KEY are
+available as env vars by the time the app boots.
 """
 
 import logging
+import os
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api.routes import ask, gaps, ingest, upload
-from app.api.schemas import HealthResponse
-from app.config import settings
-from app.retrieval.reranker import _get_model
 from app.utils.logging import configure_logging
 
 configure_logging()
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Load secrets from AWS Secrets Manager before Settings() is instantiated.
+# In development, AWS_SECRET_NAME is empty so this is a no-op.
+# ---------------------------------------------------------------------------
+_secret_name = os.environ.get("AWS_SECRET_NAME", "")
+_aws_region = os.environ.get("AWS_REGION", "us-east-1")
+if _secret_name:
+    from app.aws.secrets import load_secrets_into_env
+    load_secrets_into_env(_secret_name, _aws_region)
+
+from app.api.routes import ask, gaps, ingest, upload  # noqa: E402 — must follow secret injection
+from app.api.schemas import HealthResponse  # noqa: E402
+from app.config import settings  # noqa: E402 — must follow secret injection
+from app.retrieval.reranker import _get_model  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -41,10 +57,10 @@ def create_app() -> FastAPI:
         redoc_url="/redoc",
     )
 
-    # CORS — restrict origins in production
+    allowed_origins = ["*"] if settings.app_env == "development" else settings.cors_origins
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"] if settings.app_env == "development" else [],
+        allow_origins=allowed_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

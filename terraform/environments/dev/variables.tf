@@ -55,3 +55,9 @@ variable "db_name" {
   type    = string
   default = "wiki_rag"
 }
+
+variable "openai_api_key" {
+  type      = string
+  sensitive = true
+  description = "OpenAI API key — stored in Secrets Manager, never in state plaintext"
+}

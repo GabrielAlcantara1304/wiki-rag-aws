@@ -13,3 +13,6 @@ eks_node_desired_size = 1
 eks_node_min_size     = 1
 eks_node_max_size     = 2
 rds_instance_class    = "db.t3.micro"
+
+# OpenAI
+openai_api_key = "sk-CHANGE_ME"

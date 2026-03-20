@@ -96,11 +96,12 @@ module "secrets" {
   source = "../../modules/secrets"
 
   name        = "${local.name}/app"
-  description = "wiki-rag application secrets (DB credentials)"
+  description = "wiki-rag application secrets (DB credentials + OpenAI API key)"
   tags        = local.common_tags
 
   secret_values = {
     database_url      = "postgresql+asyncpg://${var.db_username}:${var.db_password}@${module.rds.endpoint}/${var.db_name}"
     database_url_sync = "postgresql://${var.db_username}:${var.db_password}@${module.rds.endpoint}/${var.db_name}"
+    openai_api_key    = var.openai_api_key
   }
 }

@@ -7,9 +7,20 @@ data:
   APP_ENV: "production"
   LOG_LEVEL: "INFO"
   AWS_REGION: "us-east-1"
-  BEDROCK_LLM_MODEL: "anthropic.claude-3-haiku-20240307-v1:0"
-  BEDROCK_EMBED_MODEL: "amazon.titan-embed-text-v2:0"
-  BEDROCK_EMBED_DIMENSIONS: "1024"
+  OPENAI_EMBEDDING_MODEL: "text-embedding-3-small"
+  OPENAI_EMBEDDING_DIMENSIONS: "1536"
+  OPENAI_CHAT_MODEL: "gpt-4o"
   WIKI_CLONE_DIR: "/tmp/wiki_clones"
-  # Terraform output secret_name goes here — app fetches DB credentials at startup
+  RETRIEVAL_TOP_K: "10"
+  RETRIEVAL_SIMILARITY_THRESHOLD: "0.5"
+  CONTEXT_WINDOW_CHUNKS: "2"
+  MAX_CHUNK_TOKENS: "800"
+  CHUNK_OVERLAP_TOKENS: "100"
+  GENERATION_TEMPERATURE: "0.1"
+  CONVERSATION_HISTORY_TURNS: "3"
+  GAP_SIMILARITY_THRESHOLD: "0.45"
+  MAX_IMAGES_PER_RESPONSE: "3"
+  # CORS_ORIGINS: '["https://wiki.example.com"]'   # uncomment and set your domain
+  # GENERATION_CONTEXT: ""                          # optional domain context for the LLM
+  # Terraform output secret_name goes here — app fetches DB credentials + OPENAI_API_KEY at startup
   AWS_SECRET_NAME: "wiki-rag-dev/app"
