@@ -13,9 +13,12 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Create non-root user (uid 1000) so libraries like torch can resolve the username
+# Create non-root user with home dir so HuggingFace cache works
 RUN addgroup --gid 1000 appuser \
- && adduser --uid 1000 --gid 1000 --no-create-home --disabled-password --gecos "" appuser
+ && adduser --uid 1000 --gid 1000 --home /home/appuser --disabled-password --gecos "" appuser
+
+# Pre-download reranker model into the image (avoids runtime download + permission issues)
+RUN python -c "from sentence_transformers import CrossEncoder; CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2', max_length=512)"
 
 # Copy application code
 COPY --chown=appuser:appuser . .
