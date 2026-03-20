@@ -79,7 +79,7 @@ resource "aws_iam_instance_profile" "bastion" {
 # SSM uses HTTPS outbound — no inbound rules needed.
 resource "aws_security_group" "bastion" {
   name        = "${var.name}-bastion"
-  description = "Bastion — SSM access only (no inbound SSH)"
+  description = "Bastion - SSM access only (no inbound SSH)"
   vpc_id      = var.vpc_id
 
   egress {
