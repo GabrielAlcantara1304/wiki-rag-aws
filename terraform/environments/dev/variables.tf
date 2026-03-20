@@ -1,6 +1,15 @@
-variable "project"     { type = string; default = "wiki-rag" }
-variable "environment" { type = string; default = "dev" }
-variable "aws_region"  { type = string; default = "us-east-1" }
+variable "project" {
+  type    = string
+  default = "wiki-rag"
+}
+variable "environment" {
+  type    = string
+  default = "dev"
+}
+variable "aws_region" {
+  type    = string
+  default = "us-east-1"
+}
 
 variable "vpc_cidr" {
   type    = string
@@ -32,9 +41,18 @@ variable "eks_node_instance_types" {
   default = ["t3.medium"]
 }
 
-variable "eks_node_desired_size" { type = number; default = 2 }
-variable "eks_node_min_size"     { type = number; default = 1 }
-variable "eks_node_max_size"     { type = number; default = 3 }
+variable "eks_node_desired_size" {
+  type    = number
+  default = 2
+}
+variable "eks_node_min_size" {
+  type    = number
+  default = 1
+}
+variable "eks_node_max_size" {
+  type    = number
+  default = 3
+}
 
 variable "rds_instance_class" {
   type    = string
