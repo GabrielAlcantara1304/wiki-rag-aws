@@ -27,7 +27,7 @@ def upgrade() -> None:
         sa.Column("detected_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("resolved_at", sa.DateTime(timezone=True), nullable=True),
     )
-    op.create_index("ix_knowledge_gaps_status", "knowledge_gaps", ["status"])
+    op.create_index("ix_knowledge_gaps_status", "knowledge_gaps", ["status"], if_not_exists=True)
 
 
 def downgrade() -> None:

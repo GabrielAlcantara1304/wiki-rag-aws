@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ayesa Digital — Docs IA</title>
+  <title>Ayesa - PaD</title>
   <link rel="icon" type="image/png" href="logo.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@700;800&display=swap" rel="stylesheet" />
@@ -41,7 +41,9 @@
         linear-gradient(90deg, rgba(58,60,245,0.04) 1px, transparent 1px);
       background-size: 40px 40px;
       pointer-events: none; z-index: 0;
+      transition: opacity .8s ease;
     }
+    body.no-grid::before { opacity: 0; }
 
     /* ─── app: dois painéis ─── */
     .app {
@@ -252,8 +254,14 @@
     .hero-title {
       font-family: var(--display); font-size: clamp(2rem, 4vw, 2.8rem);
       font-weight: 800; text-transform: uppercase; line-height: 1.05;
+      user-select: none;
     }
-    .hero-title span { color: var(--pink); }
+    .hero-title span:not(.hero-cursor) { color: var(--pink); display: block; text-align: right; }
+    .hero-cursor {
+      color: var(--pink);
+      animation: blink .7s step-end infinite;
+      font-weight: 400;
+    }
 
     .hero-sub { font-size: .8rem; color: var(--muted); line-height: 1.6; }
     .hero-sub em { color: var(--teal); font-style: normal; }
@@ -304,29 +312,19 @@
 
     /* resultado */
     .result {
-      border: 1px solid var(--border); border-radius: 14px;
-      overflow: hidden; animation: fadeUp .3s ease forwards;
+      animation: fadeUp .3s ease forwards;
     }
     @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 
     .answer-block {
-      padding: 1.5rem 1.75rem; background: var(--surface);
-      border-bottom: 1px solid var(--border); position: relative;
+      padding: .25rem 0 1rem;
     }
-    .answer-block::before {
-      content: ''; position: absolute; left:0; top:0; bottom:0; width:3px;
-      background: linear-gradient(180deg, var(--blue), var(--pink));
-      border-radius: 3px 0 0 0;
-    }
-    .answer-label {
-      font-family: var(--display); font-size: .62rem; font-weight: 700;
-      letter-spacing: .2em; text-transform: uppercase;
-      color: var(--blue); margin-bottom: .85rem;
-    }
-    .answer-text { font-size: .9rem; line-height: 1.85; color: var(--text); }
-    .answer-text.typing::after {
-      content: '▋'; color: var(--pink);
-      animation: blink .7s step-end infinite; margin-left: 2px;
+    .answer-text { font-size: 1.05rem; line-height: 1.9; color: var(--text); }
+    .typing-cursor {
+      color: var(--pink);
+      animation: blink .7s step-end infinite;
+      margin-left: 2px;
+      display: inline;
     }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
 
@@ -336,14 +334,14 @@
       text-transform: uppercase; letter-spacing: .04em;
       color: var(--pink); margin: 1.2rem 0 .5rem; line-height: 1.15;
     }
-    .answer-text h1 { font-size: 1.25rem; }
-    .answer-text h2 { font-size: 1.05rem; }
+    .answer-text h1 { font-size: 1.45rem; }
+    .answer-text h2 { font-size: 1.2rem; }
     .answer-text h3 {
       font-family: var(--display); font-weight: 700; color: var(--teal);
-      font-size: .92rem; text-transform: uppercase; letter-spacing: .06em;
+      font-size: 1.05rem; text-transform: uppercase; letter-spacing: .06em;
       margin: 1rem 0 .4rem;
     }
-    .answer-text h4 { font-weight: 600; color: var(--blue); font-size: .88rem; margin: .8rem 0 .3rem; }
+    .answer-text h4 { font-weight: 600; color: var(--blue); font-size: 1rem; margin: .8rem 0 .3rem; }
     .answer-text p { margin: .5rem 0; }
     .answer-text strong { color: #fff; font-weight: 600; }
     .answer-text em { color: var(--teal); font-style: italic; }
@@ -372,23 +370,53 @@
       padding: .5rem 0 .5rem 1rem; color: var(--muted); font-style: italic;
       background: rgba(58,60,245,.04); border-radius: 0 6px 6px 0;
     }
-    .answer-text table { width: 100%; border-collapse: collapse; margin: .75rem 0; font-size: .83rem; }
+    .answer-text table { width: 100%; border-collapse: collapse; margin: .75rem 0; font-size: .95rem; }
     .answer-text th {
       background: rgba(58,60,245,.15); color: var(--blue); font-weight: 600;
-      text-align: left; padding: .5rem .85rem; border-bottom: 1px solid var(--border);
-      font-family: var(--display); text-transform: uppercase; font-size: .72rem; letter-spacing: .06em;
+      text-align: left; padding: .6rem 1rem; border-bottom: 1px solid var(--border);
+      font-family: var(--display); text-transform: uppercase; font-size: .82rem; letter-spacing: .06em;
     }
-    .answer-text td { padding: .45rem .85rem; border-bottom: 1px solid rgba(30,30,58,.6); color: var(--text); }
+    .answer-text td { padding: .55rem 1rem; border-bottom: 1px solid rgba(30,30,58,.6); color: var(--text); }
     .answer-text tr:last-child td { border-bottom: none; }
     .answer-text tr:hover td { background: rgba(58,60,245,.04); }
     .answer-text hr { border: none; border-top: 1px solid var(--border); margin: 1rem 0; }
     .answer-text a { color: var(--teal); text-decoration: underline; text-decoration-color: rgba(0,229,204,.3); }
 
+    /* images block */
+    .images-block {
+      display: flex; flex-wrap: wrap; gap: .75rem;
+      margin-top: 1rem;
+    }
+    .images-block img {
+      max-width: 100%; max-height: 320px;
+      border-radius: 8px; border: 1px solid var(--border);
+      object-fit: contain; cursor: pointer;
+      opacity: 0; animation: fadeUp .5s ease forwards;
+    }
+    .images-block img:nth-child(1) { animation-delay: 0s; }
+    .images-block img:nth-child(2) { animation-delay: .15s; }
+    .images-block img:nth-child(3) { animation-delay: .3s; }
+
+    /* lightbox */
+    .lightbox-overlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,.88);
+      align-items: center; justify-content: center;
+      cursor: pointer;
+    }
+    .lightbox-overlay.active { display: flex; }
+    .lightbox-overlay img {
+      max-width: 92vw; max-height: 88vh;
+      border-radius: 10px; border: 1px solid var(--border);
+      object-fit: contain; pointer-events: none;
+    }
+
     /* meta + fontes */
     .meta-row {
-      padding: .6rem 1.75rem; background: #0d0d1e;
+      padding: .75rem 0; background: transparent;
       display: flex; align-items: center; justify-content: space-between;
-      font-size: .67rem; color: var(--muted); border-bottom: 1px solid var(--border);
+      font-size: .8rem; color: var(--muted); border-top: 1px solid var(--border);
     }
     .chunks { display: flex; align-items: center; gap: .4rem; }
     .chunks::before {
@@ -397,23 +425,23 @@
     }
     .toggle-sources {
       background: none; border: 1px solid var(--border); color: var(--muted);
-      font-family: var(--font); font-size: .67rem; padding: .3em .85em;
+      font-family: var(--font); font-size: .78rem; padding: .35em 1em;
       cursor: pointer; border-radius: 6px; transition: color .15s, border-color .15s;
     }
     .toggle-sources:hover { color: var(--text); border-color: var(--pink); }
 
     .low-confidence-badge {
       display: inline-flex; align-items: center; gap: .35rem;
-      font-size: .62rem; color: #f59e0b;
+      font-size: .74rem; color: #f59e0b;
       background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.25);
-      border-radius: 4px; padding: .2em .6em;
+      border-radius: 4px; padding: .25em .7em;
     }
     .low-confidence-badge svg { width: 11px; height: 11px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 
     .feedback-btn {
       background: none; border: 1px solid var(--border);
       color: var(--muted); font-family: var(--font);
-      font-size: .67rem; padding: .3em .7em; cursor: pointer;
+      font-size: .78rem; padding: .35em .85em; cursor: pointer;
       border-radius: 6px; display: inline-flex; align-items: center; gap: .3rem;
       transition: color .15s, border-color .15s;
     }
@@ -429,10 +457,10 @@
     }
     .source-item:last-child { border-bottom: none; }
     .source-item:hover { background: rgba(58,60,245,.04); }
-    .source-doc { font-size: .77rem; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .source-section { font-size: .69rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .source-snippet { font-size: .71rem; color: var(--muted); margin-top: .35rem; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; grid-column: 1/-1; }
-    .sim-badge { font-size: .63rem; padding: .2em .5em; border-radius: 4px; background: rgba(58,60,245,.15); color: var(--blue); font-weight: 600; white-space: nowrap; }
+    .source-doc { font-size: .9rem; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .source-section { font-size: .8rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .source-snippet { font-size: .82rem; color: var(--muted); margin-top: .35rem; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; grid-column: 1/-1; }
+    .sim-badge { font-size: .75rem; padding: .25em .6em; border-radius: 4px; background: rgba(58,60,245,.15); color: var(--blue); font-weight: 600; white-space: nowrap; }
     .sim-badge.high { background: rgba(232,24,122,.15); color: var(--pink); }
     .sim-badge.low  { background: rgba(107,107,143,.15); color: var(--muted); }
 
@@ -536,9 +564,9 @@
 
       <div class="empty-state" id="emptyState">
         <div>
-          <div class="hero-title">Pergunte à<br/><span>documentação.</span></div>
+          <div class="hero-title" id="heroTitle"></div>
           <p class="hero-sub" style="margin-top:.6rem">
-            <em>582 páginas</em> · <em>30.381 chunks</em>
+            <em id="statDocs">…</em> páginas · <em id="statChunks">…</em> chunks
           </p>
         </div>
         <div class="examples-grid">
@@ -572,7 +600,7 @@
         </button>
       </div>
       <div class="input-footer">
-        <span class="hint">Pressione <kbd>Ctrl+Enter</kbd> para enviar</span>
+        <span class="hint"><kbd>Enter</kbd> para enviar · <kbd>Shift+Enter</kbd> para quebrar linha</span>
         <span class="elapsed" id="elapsed2"></span>
       </div>
     </div>
@@ -580,335 +608,566 @@
   </div><!-- /main -->
 </div><!-- /app -->
 
+<!-- Lightbox overlay -->
+<div class="lightbox-overlay" id="lightboxOverlay">
+  <img id="lightboxImg" src="" alt="" />
+</div>
+
 <script>
-  const questionEl   = document.getElementById('question');
-  const askBtn       = document.getElementById('askBtn');
-  const loadingEl    = document.getElementById('loading');
-  const loadingText  = document.getElementById('loadingText');
-  const conversation = document.getElementById('conversation');
-  const emptyState   = document.getElementById('emptyState');
-  const errorMsg     = document.getElementById('errorMsg');
-  const elapsedEl    = document.getElementById('elapsed');
-  const scrollArea   = document.getElementById('scrollArea');
-  const newChatBtn   = document.getElementById('newChatBtn');
-  const histList       = document.getElementById('histList');
-  const histClear      = document.getElementById('histClear');
-  const toggleSidebar  = document.getElementById('toggleSidebar');
-  const app            = document.querySelector('.app');
+  // ── Constants ──────────────────────────────────────────────────────────────
+  const API_BASE_URL                 = 'http://localhost:8001';
+  const HISTORY_STORAGE_KEY          = 'wiki_rag_history';
+  const HISTORY_MAX_ITEMS            = 50;
+  const LOW_CONFIDENCE_THRESHOLD     = 0.45;
+  const LOADING_TEXT_INTERVAL_MS     = 1800;
+  const TEXTAREA_MAX_HEIGHT_PX       = 180;
+  const TYPEWRITER_CHAR_SPEED_MS     = 65;
+  const TYPEWRITER_ANSWER_SPEED_MS   = 16;
+  const TYPEWRITER_ERASE_SPEED_MS    = 38;
+  const TYPEWRITER_PREP_SPEED_MS     = 80;
+  const TYPEWRITER_PAUSE_MS          = 120;
+  const TYPEWRITER_INITIAL_DELAY_MS  = 400;
+  const SYNONYM_HOLD_DURATION_MS     = 3000;
 
-  toggleSidebar.addEventListener('click', () => {
-    app.classList.toggle('sidebar-collapsed');
-  });
+  // ── DOM references ─────────────────────────────────────────────────────────
+  const questionInput    = document.getElementById('question');
+  const askButton        = document.getElementById('askBtn');
+  const loadingIndicator = document.getElementById('loading');
+  const loadingText      = document.getElementById('loadingText');
+  const conversationEl   = document.getElementById('conversation');
+  const emptyState       = document.getElementById('emptyState');
+  const errorMessage     = document.getElementById('errorMsg');
+  const elapsedEl        = document.getElementById('elapsed');
+  const scrollArea       = document.getElementById('scrollArea');
+  const newChatButton    = document.getElementById('newChatBtn');
+  const historyList      = document.getElementById('histList');
+  const historyClearBtn  = document.getElementById('histClear');
+  const sidebarToggle    = document.getElementById('toggleSidebar');
+  const appContainer     = document.querySelector('.app');
 
-  // ── Conversa ──────────────────────────────────────────────────────────────
-  let chatHistory = [];
-  let activeHistId = null;
 
-  newChatBtn.addEventListener('click', () => {
-    chatHistory = [];
-    activeHistId = null;
-    conversation.innerHTML = '';
-    emptyState.classList.remove('hidden');
-    elapsedEl.textContent = '';
-    renderHistPanel();
-    questionEl.focus();
-  });
+  // ── State ──────────────────────────────────────────────────────────────────
+  let chatHistory    = [];
+  let activeHistoryId = null;
 
-  // ── Histórico (localStorage) ───────────────────────────────────────────────
-  const HIST_KEY = 'wiki_rag_history';
-  const HIST_MAX = 50;
+  // ── Lightbox ───────────────────────────────────────────────────────────────
+  const lightboxOverlay = document.getElementById('lightboxOverlay');
+  const lightboxImage   = document.getElementById('lightboxImg');
 
-  function loadHistory() {
-    try { return JSON.parse(localStorage.getItem(HIST_KEY) || '[]'); }
-    catch { return []; }
+  function openLightbox(imageUrl, altText) {
+    lightboxImage.src = imageUrl;
+    lightboxImage.alt = altText;
+    lightboxOverlay.classList.add('active');
   }
 
-  function saveToHistory(question, answer, sources, total_chunks) {
-    const hist = loadHistory();
-    hist.unshift({ id: Date.now(), question, answer, sources, total_chunks, ts: new Date().toISOString() });
-    if (hist.length > HIST_MAX) hist.length = HIST_MAX;
-    localStorage.setItem(HIST_KEY, JSON.stringify(hist));
-  }
-
-  function groupByDate(items) {
-    const groups = {};
-    const now = new Date();
-    const order = ['Hoje', 'Ontem', 'Últimos 7 dias', 'Últimos 30 dias', 'Mais antigos'];
-    items.forEach(item => {
-      const diffDays = Math.floor((now - new Date(item.ts)) / 86400000);
-      const label = diffDays === 0 ? 'Hoje'
-                  : diffDays === 1 ? 'Ontem'
-                  : diffDays < 7  ? 'Últimos 7 dias'
-                  : diffDays < 30 ? 'Últimos 30 dias'
-                  : 'Mais antigos';
-      if (!groups[label]) groups[label] = [];
-      groups[label].push(item);
-    });
-    return { groups, order };
-  }
-
-  function renderHistPanel() {
-    const hist = loadHistory();
-    histList.innerHTML = '';
-    if (!hist.length) {
-      histList.innerHTML = '<div class="hist-empty">Nenhuma pergunta ainda.</div>';
-      return;
-    }
-    const { groups, order } = groupByDate(hist);
-    order.forEach(label => {
-      if (!groups[label]) return;
-      const gl = document.createElement('div');
-      gl.className = 'hist-group-label';
-      gl.textContent = label;
-      histList.appendChild(gl);
-      groups[label].forEach(item => {
-        const el = document.createElement('div');
-        el.className = 'hist-item' + (item.id === activeHistId ? ' active' : '');
-        const t = new Date(item.ts);
-        const timeStr = t.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        el.innerHTML = `
-          <div class="hist-item-q">${escHtml(item.question)}</div>
-          <div class="hist-item-meta">${timeStr}</div>
-        `;
-        el.addEventListener('click', () => loadHistoryItem(item));
-        histList.appendChild(el);
-      });
-    });
-  }
-
-  function loadHistoryItem(item) {
-    activeHistId = item.id;
-    chatHistory = [
-      { role: 'user', content: item.question },
-      { role: 'assistant', content: item.answer },
-    ];
-    conversation.innerHTML = '';
-    emptyState.classList.add('hidden');
-    renderHistPanel();
-
-    const qBubble = document.createElement('div');
-    qBubble.style.cssText = 'align-self:flex-end;background:var(--surface);border:1px solid var(--border);border-radius:14px 14px 4px 14px;padding:.75rem 1.1rem;font-size:.88rem;max-width:75%;line-height:1.55';
-    qBubble.textContent = item.question;
-    conversation.appendChild(qBubble);
-
-    renderResult({ answer: item.answer, sources: item.sources, total_chunks_retrieved: item.total_chunks }, true);
-  }
-
-  histClear.addEventListener('click', () => {
-    localStorage.removeItem(HIST_KEY);
-    activeHistId = null;
-    renderHistPanel();
+  lightboxOverlay.addEventListener('click', () => {
+    lightboxOverlay.classList.remove('active');
+    lightboxImage.src = '';
   });
 
-  // ── Input ──────────────────────────────────────────────────────────────────
-  questionEl.addEventListener('input', () => {
-    questionEl.style.height = 'auto';
-    questionEl.style.height = Math.min(questionEl.scrollHeight, 180) + 'px';
-  });
+  sidebarToggle.addEventListener('click', () => appContainer.classList.toggle('sidebar-collapsed'));
 
-  questionEl.addEventListener('keydown', e => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') ask();
-  });
+  // ── Utilities ──────────────────────────────────────────────────────────────
+  function escapeHtml(text) {
+    return (text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
 
-  askBtn.addEventListener('click', ask);
+  function cleanText(text) {
+    return (text || '').replace(/â€\x90/g, '→').replace(/[^\x00-\x7F\u00C0-\u024F\u2019\u2018\u201C\u201D→]/g, '');
+  }
 
-  document.querySelectorAll('.example-pill').forEach(pill => {
-    pill.addEventListener('click', () => {
-      questionEl.value = pill.textContent;
-      questionEl.dispatchEvent(new Event('input'));
-      ask();
-    });
-  });
-
-  function scrollBottom() {
+  function scrollToBottom() {
     setTimeout(() => scrollArea.scrollTo({ top: scrollArea.scrollHeight, behavior: 'smooth' }), 50);
   }
 
-  function setLoading(on) {
-    askBtn.disabled = on;
-    loadingEl.classList.toggle('visible', on);
-    errorMsg.classList.remove('visible');
+  // ── History ────────────────────────────────────────────────────────────────
+  function loadHistory() {
+    try { return JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || '[]'); }
+    catch { return []; }
   }
 
-  const frases = ['Buscando na documentação…', 'Classificando resultados…', 'Gerando resposta…'];
+  function saveToHistory(question, answer, sources, totalChunks, images) {
+    const history = loadHistory();
+    history.unshift({ id: Date.now(), question, answer, sources, total_chunks: totalChunks, images, ts: new Date().toISOString() });
+    if (history.length > HISTORY_MAX_ITEMS) history.length = HISTORY_MAX_ITEMS;
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
+  }
 
-  async function ask() {
-    const q = questionEl.value.trim();
-    if (!q) return;
+  function groupHistoryByDate(items) {
+    const now    = new Date();
+    const groups = {};
+    const order  = ['Hoje', 'Ontem', 'Últimos 7 dias', 'Últimos 30 dias', 'Mais antigos'];
+
+    items.forEach(item => {
+      const daysDiff = Math.floor((now - new Date(item.ts)) / 86400000);
+      const label    = daysDiff === 0 ? 'Hoje'
+                     : daysDiff === 1 ? 'Ontem'
+                     : daysDiff < 7  ? 'Últimos 7 dias'
+                     : daysDiff < 30 ? 'Últimos 30 dias'
+                     : 'Mais antigos';
+      if (!groups[label]) groups[label] = [];
+      groups[label].push(item);
+    });
+
+    return { groups, order };
+  }
+
+  function createHistoryItemElement(item) {
+    const element  = document.createElement('div');
+    element.className = 'hist-item' + (item.id === activeHistoryId ? ' active' : '');
+    const timeLabel = new Date(item.ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    element.innerHTML = `
+      <div class="hist-item-q">${escapeHtml(item.question)}</div>
+      <div class="hist-item-meta">${timeLabel}</div>
+    `;
+    element.addEventListener('click', () => restoreHistoryItem(item));
+    return element;
+  }
+
+  function renderHistoryPanel() {
+    const history = loadHistory();
+    historyList.innerHTML = '';
+
+    if (!history.length) {
+      historyList.innerHTML = '<div class="hist-empty">Nenhuma pergunta ainda.</div>';
+      return;
+    }
+
+    const { groups, order } = groupHistoryByDate(history);
+    order.forEach(label => {
+      if (!groups[label]) return;
+      const groupLabel = document.createElement('div');
+      groupLabel.className = 'hist-group-label';
+      groupLabel.textContent = label;
+      historyList.appendChild(groupLabel);
+      groups[label].forEach(item => historyList.appendChild(createHistoryItemElement(item)));
+    });
+  }
+
+  function restoreHistoryItem(item) {
+    activeHistoryId = item.id;
+    chatHistory = [
+      { role: 'user',      content: item.question },
+      { role: 'assistant', content: item.answer   },
+    ];
+    conversationEl.innerHTML = '';
+    emptyState.classList.add('hidden');
+    document.body.classList.add('no-grid');
+    renderHistoryPanel();
+    conversationEl.appendChild(createQuestionBubble(item.question));
+    renderResultInstant({ answer: item.answer, sources: item.sources, total_chunks_retrieved: item.total_chunks, images: item.images });
+  }
+
+  historyClearBtn.addEventListener('click', () => {
+    localStorage.removeItem(HISTORY_STORAGE_KEY);
+    activeHistoryId = null;
+    renderHistoryPanel();
+  });
+
+  // ── Input ──────────────────────────────────────────────────────────────────
+  questionInput.addEventListener('input', () => {
+    questionInput.style.height = 'auto';
+    questionInput.style.height = Math.min(questionInput.scrollHeight, TEXTAREA_MAX_HEIGHT_PX) + 'px';
+  });
+
+  questionInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); submitQuestion(); }
+  });
+
+  askButton.addEventListener('click', submitQuestion);
+
+  document.querySelectorAll('.example-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      questionInput.value = pill.textContent;
+      questionInput.dispatchEvent(new Event('input'));
+      submitQuestion();
+    });
+  });
+
+  // ── Ask flow ───────────────────────────────────────────────────────────────
+  const loadingPhrases = ['Buscando na documentação…', 'Classificando resultados…', 'Gerando resposta…'];
+
+  function createQuestionBubble(questionText) {
+    const bubble = document.createElement('div');
+    bubble.style.cssText = 'align-self:flex-end;background:var(--surface);border:1px solid var(--border);border-radius:14px 14px 4px 14px;padding:.9rem 1.25rem;font-size:1rem;max-width:75%;line-height:1.6;animation:fadeUp .25s ease forwards';
+    bubble.textContent = questionText;
+    return bubble;
+  }
+
+  function setLoadingState(isLoading) {
+    askButton.disabled = isLoading;
+    loadingIndicator.classList.toggle('visible', isLoading);
+    errorMessage.classList.remove('visible');
+  }
+
+  function startLoadingTextCycle() {
+    let phraseIndex = 0;
+    loadingText.textContent = loadingPhrases[0];
+    return setInterval(() => {
+      phraseIndex = (phraseIndex + 1) % loadingPhrases.length;
+      loadingText.textContent = loadingPhrases[phraseIndex];
+    }, LOADING_TEXT_INTERVAL_MS);
+  }
+
+  async function fetchAnswer(question) {
+    const response = await fetch(`${API_BASE_URL}/ask`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, conversation_history: chatHistory }),
+    });
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
+      throw new Error(errorBody.detail || `HTTP ${response.status}`);
+    }
+    return response.json();
+  }
+
+  async function submitQuestion() {
+    const question = questionInput.value.trim();
+    if (!question) return;
 
     emptyState.classList.add('hidden');
-    setLoading(true);
+    document.body.classList.add('no-grid');
+    setLoadingState(true);
     elapsedEl.textContent = '';
 
-    const qBubble = document.createElement('div');
-    qBubble.style.cssText = 'align-self:flex-end;background:var(--surface);border:1px solid var(--border);border-radius:14px 14px 4px 14px;padding:.75rem 1.1rem;font-size:.88rem;max-width:75%;line-height:1.55;animation:fadeUp .25s ease forwards';
-    qBubble.textContent = q;
-    conversation.appendChild(qBubble);
-    scrollBottom();
+    conversationEl.appendChild(createQuestionBubble(question));
+    scrollToBottom();
 
-    questionEl.value = '';
-    questionEl.style.height = 'auto';
+    questionInput.value = '';
+    questionInput.style.height = 'auto';
 
-    let i = 0;
-    loadingText.textContent = frases[0];
-    const timer = setInterval(() => { i = (i + 1) % frases.length; loadingText.textContent = frases[i]; }, 1800);
-    const t0 = Date.now();
+    const loadingTimer      = startLoadingTextCycle();
+    const requestStartTime  = Date.now();
 
     try {
-      const res = await fetch('http://localhost:8001/ask', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: q, conversation_history: chatHistory }),
-      });
+      const responseData    = await fetchAnswer(question);
+      const elapsedSeconds  = ((Date.now() - requestStartTime) / 1000).toFixed(2);
 
-      clearInterval(timer);
+      elapsedEl.textContent = `${elapsedSeconds}s`;
+      document.getElementById('elapsed2').textContent = `${elapsedSeconds}s`;
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: res.statusText }));
-        throw new Error(err.detail || `HTTP ${res.status}`);
-      }
+      chatHistory.push({ role: 'user',      content: question             });
+      chatHistory.push({ role: 'assistant', content: responseData.answer  });
 
-      const data = await res.json();
-      const elapsed = ((Date.now() - t0) / 1000).toFixed(2);
-      elapsedEl.textContent = `${elapsed}s`;
-      document.getElementById('elapsed2').textContent = `${elapsed}s`;
-
-      chatHistory.push({ role: 'user', content: q });
-      chatHistory.push({ role: 'assistant', content: data.answer });
-
-      saveToHistory(q, data.answer, data.sources, data.total_chunks_retrieved);
-      activeHistId = loadHistory()[0]?.id ?? null;
-      renderHistPanel();
-
-      renderResult(data);
-    } catch (err) {
-      clearInterval(timer);
-      errorMsg.textContent = `Erro: ${err.message}`;
-      errorMsg.classList.add('visible');
+      saveToHistory(question, responseData.answer, responseData.sources, responseData.total_chunks_retrieved, responseData.images);
+      activeHistoryId = loadHistory()[0]?.id ?? null;
+      renderHistoryPanel();
+      renderResult(responseData);
+    } catch (error) {
+      errorMessage.textContent = `Erro: ${error.message}`;
+      errorMessage.classList.add('visible');
     } finally {
-      setLoading(false);
-      scrollBottom();
+      clearInterval(loadingTimer);
+      setLoadingState(false);
+      scrollToBottom();
     }
   }
 
-  function cleanText(t) {
-    return (t || '').replace(/â€\x90/g, '→').replace(/[^\x00-\x7F\u00C0-\u024F\u2019\u2018\u201C\u201D→]/g, '');
+  // ── Render result ──────────────────────────────────────────────────────────
+  function buildImagesBlock(images) {
+    if (!images || !images.length) return null;
+    const block = document.createElement('div');
+    block.className = 'images-block';
+    images.forEach(image => {
+      const imageEl  = document.createElement('img');
+      imageEl.src    = image.url;
+      imageEl.alt    = image.alt_text || '';
+      imageEl.title  = image.alt_text || '';
+      imageEl.addEventListener('click', () => openLightbox(image.url, image.alt_text || ''));
+      block.appendChild(imageEl);
+    });
+    return block;
   }
 
-  function renderResult(data, instant = false) {
-    let sourcesOpen = false;
-    const result = document.createElement('div');
-    result.className = 'result';
+  function buildSourcesPanel(sources) {
+    const panel = document.createElement('div');
+    panel.className = 'sources-panel';
+    (sources || []).forEach(source => {
+      const similarityPercent = (source.similarity * 100).toFixed(0);
+      const badgeClass = source.similarity >= 0.6 ? 'high' : source.similarity < LOW_CONFIDENCE_THRESHOLD ? 'low' : '';
+      const item = document.createElement('div');
+      item.className = 'source-item';
+      item.innerHTML = `
+        <div>
+          <div class="source-doc">${cleanText(source.document)}</div>
+          <div class="source-section">${cleanText(source.section)}</div>
+        </div>
+        <span class="sim-badge ${badgeClass}">${similarityPercent}%</span>
+        <div class="source-snippet">${escapeHtml(source.snippet)}</div>
+      `;
+      panel.appendChild(item);
+    });
+    return panel;
+  }
 
-    const answerBlock = document.createElement('div');
-    answerBlock.className = 'answer-block';
-    answerBlock.innerHTML = '<p class="answer-label">Resposta</p>';
-    const answerText = document.createElement('div');
-    answerText.className = 'answer-text';
-    answerBlock.appendChild(answerText);
-
-    const metaRow = document.createElement('div');
-    metaRow.className = 'meta-row';
-    const total = data.total_chunks_retrieved;
-    const lowConf = data.max_similarity != null && data.max_similarity < 0.45;
-    metaRow.innerHTML = `
+  function buildMetaRow(responseData) {
+    const totalChunks    = responseData.total_chunks_retrieved;
+    const isLowConfidence = responseData.max_similarity != null && responseData.max_similarity < LOW_CONFIDENCE_THRESHOLD;
+    const row = document.createElement('div');
+    row.className = 'meta-row';
+    row.innerHTML = `
       <span style="display:flex;align-items:center;gap:.6rem">
-        <span class="chunks">${total} trecho${total !== 1 ? 's' : ''} recuperado${total !== 1 ? 's' : ''}</span>
-        ${lowConf ? `<span class="low-confidence-badge"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>baixa confiança</span>` : ''}
+        <span class="chunks">${totalChunks} trecho${totalChunks !== 1 ? 's' : ''} recuperado${totalChunks !== 1 ? 's' : ''}</span>
+        ${isLowConfidence ? `<span class="low-confidence-badge"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>baixa confiança</span>` : ''}
       </span>
       <span style="display:flex;align-items:center;gap:.5rem">
-        <button class="feedback-btn" data-question="" data-answer="" data-sim="" data-gapid="${data.gap_id || ''}">
+        <button class="feedback-btn" data-gap-id="${responseData.gap_id || ''}">
           <svg viewBox="0 0 24 24"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3z"/><path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg>
           Não ajudou
         </button>
         <button class="toggle-sources">Ver fontes</button>
       </span>
     `;
+    return row;
+  }
 
-    const sourcesPanel = document.createElement('div');
-    sourcesPanel.className = 'sources-panel';
-
-    metaRow.querySelector('.toggle-sources').addEventListener('click', function() {
-      sourcesOpen = !sourcesOpen;
-      sourcesPanel.classList.toggle('open', sourcesOpen);
-      this.textContent = sourcesOpen ? 'Ocultar fontes' : 'Ver fontes';
-    });
-
-    (data.sources || []).forEach(src => {
-      const sim = (src.similarity * 100).toFixed(0);
-      const badgeClass = src.similarity >= 0.6 ? 'high' : src.similarity < 0.45 ? 'low' : '';
-      const item = document.createElement('div');
-      item.className = 'source-item';
-      item.innerHTML = `
-        <div>
-          <div class="source-doc">${cleanText(src.document)}</div>
-          <div class="source-section">${cleanText(src.section)}</div>
-        </div>
-        <span class="sim-badge ${badgeClass}">${sim}%</span>
-        <div class="source-snippet">${escHtml(src.snippet)}</div>
-      `;
-      sourcesPanel.appendChild(item);
-    });
-
-    result.appendChild(answerBlock);
-    result.appendChild(metaRow);
-    result.appendChild(sourcesPanel);
-    conversation.appendChild(result);
-
-    // Wire feedback button after question bubble is appended
-    const feedbackBtn = metaRow.querySelector('.feedback-btn');
-    const lastQ = conversation.querySelectorAll('[data-role="question"]');
-    feedbackBtn.dataset.answer = data.answer?.slice(0, 500) || '';
-    feedbackBtn.dataset.sim = data.max_similarity ?? '';
-    feedbackBtn.addEventListener('click', async function() {
+  function wireFeedbackButton(feedbackButton, responseData) {
+    feedbackButton.addEventListener('click', async function () {
       if (this.classList.contains('sent')) return;
-      const q = chatHistory.length >= 2 ? chatHistory[chatHistory.length - 2]?.content : '';
+      const lastUserMessage = chatHistory.length >= 2 ? chatHistory[chatHistory.length - 2]?.content : '';
       try {
-        await fetch('http://localhost:8001/gaps/feedback', {
+        await fetch(`${API_BASE_URL}/gaps/feedback`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            question: q || 'desconhecida',
-            answer_given: this.dataset.answer,
-            max_similarity: this.dataset.sim ? parseFloat(this.dataset.sim) : null,
+            question:        lastUserMessage || 'desconhecida',
+            answer_given:    (responseData.answer || '').slice(0, 500),
+            max_similarity:  responseData.max_similarity ?? null,
           }),
         });
-      } catch(_) {}
+      } catch (_) {}
       this.classList.add('sent');
       this.innerHTML = `<svg viewBox="0 0 24 24"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3z"/><path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg> Registrado`;
     });
-
-    scrollBottom();
-    if (instant) {
-      answerText.innerHTML = marked.parse(data.answer);
-    } else {
-      typewrite(answerText, data.answer);
-    }
   }
 
+  function wireToggleSources(toggleButton, sourcesPanel) {
+    let sourcesVisible = false;
+    toggleButton.addEventListener('click', function () {
+      sourcesVisible = !sourcesVisible;
+      sourcesPanel.classList.toggle('open', sourcesVisible);
+      this.textContent = sourcesVisible ? 'Ocultar fontes' : 'Ver fontes';
+    });
+  }
+
+  function buildResultContainer(responseData) {
+    const answerTextEl  = document.createElement('div');
+    answerTextEl.className = 'answer-text';
+
+    const answerBlock   = document.createElement('div');
+    answerBlock.className = 'answer-block';
+    answerBlock.appendChild(answerTextEl);
+
+    const sourcesPanel  = buildSourcesPanel(responseData.sources);
+    const metaRow       = buildMetaRow(responseData);
+
+    wireFeedbackButton(metaRow.querySelector('.feedback-btn'), responseData);
+    wireToggleSources(metaRow.querySelector('.toggle-sources'), sourcesPanel);
+
+    const resultContainer = document.createElement('div');
+    resultContainer.className = 'result';
+    resultContainer.appendChild(answerBlock);
+    resultContainer.appendChild(metaRow);
+    resultContainer.appendChild(sourcesPanel);
+    conversationEl.appendChild(resultContainer);
+
+    return { answerTextEl, answerBlock };
+  }
+
+  function appendImages(answerBlock, images) {
+    const imagesBlock = buildImagesBlock(images);
+    if (!imagesBlock) return;
+    answerBlock.appendChild(imagesBlock);
+    scrollToBottom();
+  }
+
+  function renderResult(responseData) {
+    const { answerTextEl, answerBlock } = buildResultContainer(responseData);
+    scrollToBottom();
+    typewriteText(answerTextEl, responseData.answer, () => appendImages(answerBlock, responseData.images));
+  }
+
+  function renderResultInstant(responseData) {
+    const { answerTextEl, answerBlock } = buildResultContainer(responseData);
+    answerTextEl.innerHTML = marked.parse(responseData.answer);
+    appendImages(answerBlock, responseData.images);
+    scrollToBottom();
+  }
+
+  // ── Typewriter ─────────────────────────────────────────────────────────────
   marked.setOptions({ breaks: true, gfm: true });
 
-  function typewrite(el, text, speed = 16) {
-    el.innerHTML = '';
-    el.classList.add('typing');
+  function typewriteText(element, text, onComplete) {
+    element.innerHTML = '';
     const words = text.split(' ');
-    let i = 0, accumulated = '';
-    function next() {
-      if (i >= words.length) { el.classList.remove('typing'); el.innerHTML = marked.parse(accumulated); return; }
-      accumulated += (i === 0 ? '' : ' ') + words[i++];
-      el.innerHTML = marked.parse(accumulated);
-      scrollBottom();
-      setTimeout(next, speed);
+    let wordIndex   = 0;
+    let accumulated = '';
+
+    const CURSOR_HTML = '<span class="typing-cursor">▋</span>';
+
+    function renderWithCursor() {
+      const parsed = marked.parse(accumulated);
+      const lastClose = parsed.lastIndexOf('</');
+      element.innerHTML = lastClose !== -1
+        ? parsed.slice(0, lastClose) + CURSOR_HTML + parsed.slice(lastClose)
+        : parsed + CURSOR_HTML;
     }
-    next();
+
+    function typeNextWord() {
+      if (wordIndex >= words.length) {
+        element.innerHTML = marked.parse(accumulated);
+        if (onComplete) onComplete();
+        return;
+      }
+      accumulated += (wordIndex === 0 ? '' : ' ') + words[wordIndex++];
+      renderWithCursor();
+      scrollToBottom();
+      setTimeout(typeNextWord, TYPEWRITER_ANSWER_SPEED_MS);
+    }
+
+    typeNextWord();
   }
 
-  function escHtml(s) {
-    return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // ── Hero typewriter ────────────────────────────────────────────────────────
+  let currentHeroAnimationId = 0;
+
+  const HERO_SYNONYMS = [
+    { prep: 'à',  word: 'documentação.'         },
+    { prep: 'à',  word: 'base de dados.'        },
+    { prep: 'à',  word: 'wiki.'                 },
+    { prep: 'à',  word: 'base de conhecimento.' },
+    { prep: 'ao', word: 'repositório.'          },
+    { prep: 'ao', word: 'manual técnico.'       },
+  ];
+
+  function runHeroTypewriter() {
+    const animationId  = ++currentHeroAnimationId;
+    const titleElement = document.getElementById('heroTitle');
+    const firstLine    = 'Pergunte à';
+
+    function isStale() { return animationId !== currentHeroAnimationId; }
+
+    function setTitleWordFocus(prep, word) {
+      titleElement.innerHTML = `Pergunte ${prep}<br/><span>${word}<span class="hero-cursor">▋</span></span>`;
+    }
+
+    function setTitlePrepFocus(prep, word) {
+      titleElement.innerHTML = `Pergunte ${prep}<span class="hero-cursor">▋</span><br/><span>${word}</span>`;
+    }
+
+    function renderInitialFrame(charCount) {
+      const fullText = firstLine + HERO_SYNONYMS[0].word;
+      const line1 = fullText.slice(0, Math.min(charCount, firstLine.length));
+      const line2 = charCount > firstLine.length ? fullText.slice(firstLine.length, charCount) : '';
+      const cursor = '<span class="hero-cursor">▋</span>';
+      return charCount > firstLine.length
+        ? `${line1}<br/><span>${line2}${cursor}</span>`
+        : `${line1}${cursor}`;
+    }
+
+    function typeInitialTitle() {
+      const totalChars = (firstLine + HERO_SYNONYMS[0].word).length;
+      let charCount = 0;
+
+      function tick() {
+        if (isStale()) return;
+        titleElement.innerHTML = renderInitialFrame(charCount);
+        if (charCount < totalChars) {
+          charCount++;
+          setTimeout(tick, TYPEWRITER_CHAR_SPEED_MS);
+        } else {
+          setTimeout(() => eraseWord(HERO_SYNONYMS[0].prep, HERO_SYNONYMS[0].word, 0), SYNONYM_HOLD_DURATION_MS);
+        }
+      }
+
+      setTimeout(tick, TYPEWRITER_INITIAL_DELAY_MS);
+    }
+
+    function eraseWord(prep, word, synonymIndex) {
+      if (isStale()) return;
+      if (word.length === 0) {
+        const nextIndex   = (synonymIndex + 1) % HERO_SYNONYMS.length;
+        const nextSynonym = HERO_SYNONYMS[nextIndex];
+        const prepChanged = nextSynonym.prep !== prep;
+        const nextAction  = prepChanged
+          ? () => erasePrep(prep, nextSynonym.prep, nextSynonym.word, nextIndex)
+          : () => typeWord(prep, nextSynonym.word, nextIndex);
+        setTimeout(nextAction, TYPEWRITER_PAUSE_MS);
+        return;
+      }
+      setTitleWordFocus(prep, word.slice(0, -1));
+      setTimeout(() => eraseWord(prep, word.slice(0, -1), synonymIndex), TYPEWRITER_ERASE_SPEED_MS);
+    }
+
+    function erasePrep(prep, nextPrep, nextWord, nextIndex) {
+      if (isStale()) return;
+      if (prep.length === 0) {
+        setTimeout(() => typePrep('', nextPrep, nextWord, nextIndex), TYPEWRITER_PAUSE_MS);
+        return;
+      }
+      setTitlePrepFocus(prep.slice(0, -1), '');
+      setTimeout(() => erasePrep(prep.slice(0, -1), nextPrep, nextWord, nextIndex), TYPEWRITER_PREP_SPEED_MS);
+    }
+
+    function typePrep(typedPrep, targetPrep, nextWord, nextIndex) {
+      if (isStale()) return;
+      const current = targetPrep.slice(0, typedPrep.length + 1);
+      setTitlePrepFocus(current, '');
+      if (current.length < targetPrep.length) {
+        setTimeout(() => typePrep(current, targetPrep, nextWord, nextIndex), TYPEWRITER_PREP_SPEED_MS);
+      } else {
+        setTimeout(() => typeWord(targetPrep, nextWord, nextIndex), TYPEWRITER_PAUSE_MS);
+      }
+    }
+
+    function typeWord(prep, word, synonymIndex) {
+      if (isStale()) return;
+      let typed = '';
+      function tick() {
+        if (isStale()) return;
+        typed = word.slice(0, typed.length + 1);
+        setTitleWordFocus(prep, typed);
+        if (typed.length < word.length) {
+          setTimeout(tick, TYPEWRITER_CHAR_SPEED_MS);
+        } else {
+          setTimeout(() => eraseWord(prep, word, synonymIndex), SYNONYM_HOLD_DURATION_MS);
+        }
+      }
+      tick();
+    }
+
+    typeInitialTitle();
   }
 
-  // Inicializa histórico
-  renderHistPanel();
+  // ── New chat ───────────────────────────────────────────────────────────────
+  newChatButton.addEventListener('click', () => {
+    chatHistory     = [];
+    activeHistoryId = null;
+    conversationEl.innerHTML = '';
+    emptyState.classList.remove('hidden');
+    document.body.classList.remove('no-grid');
+    elapsedEl.textContent = '';
+    document.getElementById('elapsed2').textContent = '';
+    renderHistoryPanel();
+    runHeroTypewriter();
+    questionInput.focus();
+  });
+
+  // ── Stats ──────────────────────────────────────────────────────────────────
+  (async function loadDocumentStats() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/stats`);
+      if (!response.ok) return;
+      const { documents, chunks } = await response.json();
+      document.getElementById('statDocs').textContent   = documents.toLocaleString('pt-BR');
+      document.getElementById('statChunks').textContent = chunks.toLocaleString('pt-BR');
+    } catch (_) {}
+  })();
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  renderHistoryPanel();
+  runHeroTypewriter();
 </script>
 </body>
 </html>

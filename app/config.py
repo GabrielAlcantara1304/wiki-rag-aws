@@ -88,6 +88,30 @@ class Settings(BaseSettings):
     )
 
     # ------------------------------------------------------------------
+    # Generation
+    # ------------------------------------------------------------------
+    generation_temperature: float = Field(
+        default=0.1,
+        description="LLM temperature — lower means more deterministic/factual answers",
+    )
+    conversation_history_turns: int = Field(
+        default=3,
+        description="Number of previous conversation turns injected into the prompt",
+    )
+    gap_similarity_threshold: float = Field(
+        default=0.45,
+        description="Max similarity below which a question is flagged as a knowledge gap",
+    )
+    max_images_per_response: int = Field(
+        default=3,
+        description="Maximum number of images attached to a single answer",
+    )
+    generation_context: str = Field(
+        default="",
+        description="Optional domain-specific background context injected into every prompt",
+    )
+
+    # ------------------------------------------------------------------
     # App
     # ------------------------------------------------------------------
     app_env: str = Field(default="development")

@@ -119,29 +119,36 @@ async def _ingest_file(
     local_path: Path,
     rel_path: Path,
 ) -> None:
-    """
-    Ingest (or re-ingest) a single markdown file.
-    Deletes any existing record first to ensure clean state.
-    """
+    """Ingest (or re-ingest) a single file. Deletes any existing record first."""
     path_str = str(rel_path)
     abs_path = local_path / rel_path
 
-    # Delete stale data (cascades to sections, chunks, assets)
     await delete_document_by_path(db, repo_url, path_str)
+    parsed = _parse_file(abs_path, path_str)
+    document = await _store_document(db, repo_url, path_str, parsed, local_path, rel_path)
+    all_chunks, all_chunk_texts = await _store_sections_and_chunks(db, document, parsed)
+    await _embed_and_assign(all_chunks, all_chunk_texts, path_str)
+    _store_assets(db, document, parsed)
 
-    # Parse — route by extension
-    suffix = abs_path.suffix.lower()
-    if suffix == ".docx":
-        file_bytes = abs_path.read_bytes()
-        parsed: ParsedDocument = parse_docx_file(path_str, file_bytes)
-    else:  # .md and .txt both go through the markdown parser
-        raw_markdown = abs_path.read_text(encoding="utf-8", errors="replace")
-        parsed: ParsedDocument = parse_markdown_file(path_str, raw_markdown)
 
-    # Get per-file commit hash for future change detection
+def _parse_file(abs_path: Path, path_str: str) -> ParsedDocument:
+    """Route file to the correct parser based on its extension."""
+    if abs_path.suffix.lower() == ".docx":
+        return parse_docx_file(path_str, abs_path.read_bytes())
+    raw_markdown = abs_path.read_text(encoding="utf-8", errors="replace")
+    return parse_markdown_file(path_str, raw_markdown)
+
+
+async def _store_document(
+    db: AsyncSession,
+    repo_url: str,
+    path_str: str,
+    parsed: ParsedDocument,
+    local_path: Path,
+    rel_path: Path,
+) -> Document:
+    """Persist the Document record and flush to obtain its ID."""
     commit_hash = get_file_commit_hash(local_path, rel_path)
-
-    # Persist document (full content preserved)
     document = Document(
         repo=repo_url,
         path=path_str,
@@ -151,12 +158,18 @@ async def _ingest_file(
         commit_hash=commit_hash,
     )
     db.add(document)
-    # We need the document ID immediately for FK relationships
     await db.flush()
+    return document
 
-    # Persist sections and collect chunks for batch embedding
-    all_chunks: list[Chunk] = []   # ORM objects (embedding=None initially)
-    all_chunk_texts: list[str] = []  # parallel list for embed_texts()
+
+async def _store_sections_and_chunks(
+    db: AsyncSession,
+    document: Document,
+    parsed: ParsedDocument,
+) -> tuple[list[Chunk], list[str]]:
+    """Persist all sections and their chunks. Returns parallel lists for embedding."""
+    all_chunks: list[Chunk] = []
+    all_chunk_texts: list[str] = []
 
     for parsed_section in parsed.sections:
         section = Section(
@@ -167,45 +180,52 @@ async def _ingest_file(
             order_index=parsed_section.order_index,
         )
         db.add(section)
-        await db.flush()  # need section.id for chunk FKs
+        await db.flush()
 
-        # Chunk the section
-        chunk_data_list: list[ChunkData] = chunk_section(parsed_section)
-
-        # Create ORM objects without embeddings yet
-        section_chunks: list[Chunk] = []
-        for cd in chunk_data_list:
-            chunk = Chunk(
-                section_id=section.id,
-                chunk_index=cd.chunk_index,
-                chunk_text=cd.chunk_text,
-                token_count=cd.token_count,
-            )
-            db.add(chunk)
-            section_chunks.append(chunk)
-            all_chunks.append(chunk)
-            all_chunk_texts.append(cd.chunk_text)
-
-        # Flush to get chunk IDs, then wire linked list
+        section_chunks = _build_chunk_orm_objects(db, section, chunk_section(parsed_section))
         await db.flush()
         _wire_linked_list(section_chunks)
 
-    # Batch embed ALL chunks for this file in one call (or batched internally)
-    logger.debug("Embedding %d chunks for %s", len(all_chunks), path_str)
-    if all_chunk_texts:
-        embeddings = await embed_texts(all_chunk_texts)
-        for chunk, embedding in zip(all_chunks, embeddings):
-            chunk.embedding = embedding
+        all_chunks.extend(section_chunks)
+        all_chunk_texts.extend(chunk.chunk_text for chunk in section_chunks)
 
-    # Persist assets
+    return all_chunks, all_chunk_texts
+
+
+def _build_chunk_orm_objects(db: AsyncSession, section: Section, chunk_data_list: list[ChunkData]) -> list[Chunk]:
+    """Create Chunk ORM objects (without embeddings) and add them to the session."""
+    section_chunks: list[Chunk] = []
+    for cd in chunk_data_list:
+        chunk = Chunk(
+            section_id=section.id,
+            chunk_index=cd.chunk_index,
+            chunk_text=cd.chunk_text,
+            token_count=cd.token_count,
+        )
+        db.add(chunk)
+        section_chunks.append(chunk)
+    return section_chunks
+
+
+async def _embed_and_assign(all_chunks: list[Chunk], all_chunk_texts: list[str], path_str: str) -> None:
+    """Batch-embed all chunk texts and assign embeddings to the ORM objects."""
+    if not all_chunk_texts:
+        return
+    logger.debug("Embedding %d chunks for %s", len(all_chunks), path_str)
+    embeddings = await embed_texts(all_chunk_texts)
+    for chunk, embedding in zip(all_chunks, embeddings):
+        chunk.embedding = embedding
+
+
+def _store_assets(db: AsyncSession, document: Document, parsed: ParsedDocument) -> None:
+    """Persist all asset records for the document."""
     for parsed_asset in parsed.assets:
-        asset = Asset(
+        db.add(Asset(
             document_id=document.id,
             file_path=parsed_asset.file_path,
             alt_text=parsed_asset.alt_text,
             context=parsed_asset.context,
-        )
-        db.add(asset)
+        ))
 
 
 def _wire_linked_list(chunks: list[Chunk]) -> None:

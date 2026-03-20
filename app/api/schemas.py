@@ -85,12 +85,27 @@ class SourceItem(BaseModel):
     path: str = Field(description="Relative file path in the repository")
 
 
+class ImageItem(BaseModel):
+    url: str
+    alt_text: str
+
+
 class AskResponse(BaseModel):
     answer: str
     sources: list[SourceItem]
     total_chunks_retrieved: int
     max_similarity: Optional[float] = None
     gap_id: Optional[str] = None
+    images: list[ImageItem] = []
+
+
+# ---------------------------------------------------------------------------
+# /stats
+# ---------------------------------------------------------------------------
+
+class StatsResponse(BaseModel):
+    documents: int
+    chunks: int
 
 
 # ---------------------------------------------------------------------------
