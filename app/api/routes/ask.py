@@ -4,26 +4,25 @@ POST /ask — answer a question from the wiki knowledge base.
 Pipeline:
   1. Validate and clean the question.
   2. Retrieve top-k relevant chunks (vector search + context expansion).
-  3. Generate a grounded answer (Bedrock Claude 3 Haiku).
-  4. Return answer + structured sources + relevant images.
+  3. Generate a grounded answer (OpenAI Responses API).
+  4. Return answer + structured sources.
 """
 
 import logging
-import mimetypes
 import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import AskRequest, AskResponse, ImageItem, SourceItem, StatsResponse
-from app.config import settings
 from app.database import get_db
 from app.generation.generator import generate_answer
+from sqlalchemy import func, select
 from app.models.db_models import Asset, Chunk, Document, KnowledgeGap
 from app.retrieval.retriever import search
+from app.config import settings
 
 GAP_PHRASES = ["não foi encontrada na documentação", "não encontrei", "não há informação"]
 
@@ -42,9 +41,11 @@ async def serve_asset(asset_id: str, db: AsyncSession = Depends(get_db)) -> File
     if asset is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Asset not found")
 
+    # External URLs cannot be served via this endpoint
     if asset.file_path.startswith("http://") or asset.file_path.startswith("https://"):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Asset is an external URL")
 
+    # Load the parent document to resolve the path
     document = await db.get(Document, asset.document_id)
     if document is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Asset not found")
@@ -53,6 +54,7 @@ async def serve_asset(asset_id: str, db: AsyncSession = Depends(get_db)) -> File
     doc_dir = (repo_root / Path(document.path).parent).resolve()
     asset_path = (doc_dir / asset.file_path).resolve()
 
+    # Security: ensure the resolved path is within the repo directory
     try:
         asset_path.relative_to(repo_root.resolve())
     except ValueError:
@@ -61,6 +63,7 @@ async def serve_asset(asset_id: str, db: AsyncSession = Depends(get_db)) -> File
     if not asset_path.exists() or not asset_path.is_file():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Asset file not found")
 
+    import mimetypes
     media_type, _ = mimetypes.guess_type(str(asset_path))
     return FileResponse(path=str(asset_path), media_type=media_type or "application/octet-stream")
 
@@ -155,10 +158,7 @@ async def _find_relevant_images(
             if asset.file_path in seen_paths:
                 continue
             seen_paths.add(asset.file_path)
-            images.append(ImageItem(
-                url=asset.file_path if is_external else f"/assets/{asset.id}",
-                alt_text=asset.alt_text or "",
-            ))
+            images.append(ImageItem(url=asset.file_path if is_external else f"/assets/{asset.id}", alt_text=asset.alt_text or ""))
         return images
     except Exception as exc:
         logger.warning("Failed to retrieve images: %s", exc)
@@ -171,8 +171,8 @@ async def _find_relevant_images(
     summary="Ask a question answered from the wiki",
     description=(
         "Performs vector similarity search over ingested wiki content, "
-        "expands context with neighbouring chunks, then uses Bedrock Claude 3 Haiku "
-        "to generate a cited answer."
+        "expands context with neighbouring chunks, then uses the OpenAI "
+        "Responses API to generate a cited answer."
     ),
 )
 async def ask(

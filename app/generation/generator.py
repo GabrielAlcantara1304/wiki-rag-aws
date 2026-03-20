@@ -1,18 +1,21 @@
 """
-Answer generation via Amazon Bedrock — Claude 3 Haiku.
+Answer generation via the OpenAI Responses API.
 
-Uses the Bedrock Converse API (multi-turn, model-agnostic interface).
-IRSA provides AWS credentials automatically on EKS — no key management.
+The generator:
+  1. Builds a context block from retrieved chunks + their neighbours.
+  2. Instructs the model to answer ONLY from the provided context.
+  3. Requires inline citations (document title + section).
+  4. Returns the answer text plus a structured list of sources.
 
-Pricing: ~$0.00025/1K input + $0.00125/1K output tokens (2024).
+Why the Responses API (not chat.completions)?
+  - Simpler input handling (instructions + input, no role dicts needed).
+  - output_text shorthand — cleaner code.
+  - Stateless by default — each call is independent, which is what we want.
 """
 
-import asyncio
-import json
 import logging
 
-import boto3
-from botocore.exceptions import ClientError
+from openai import AsyncOpenAI
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -20,73 +23,54 @@ from tenacity import (
     wait_exponential,
     before_sleep_log,
 )
+from openai import RateLimitError, APIError
 
 from app.config import settings
 from app.retrieval.retriever import ChunkResult
 
 logger = logging.getLogger(__name__)
 
-_bedrock_client = None
-
-
-def _get_client():
-    global _bedrock_client
-    if _bedrock_client is None:
-        _bedrock_client = boto3.client(
-            "bedrock-runtime",
-            region_name=settings.aws_region,
-        )
-    return _bedrock_client
+_client = AsyncOpenAI(api_key=settings.openai_api_key)
 
 # ---------------------------------------------------------------------------
 # Prompt templates
 # ---------------------------------------------------------------------------
 
-_ENVIRONMENT_CONTEXT = """
-[CONTEXTO DO AMBIENTE]
-O ambiente da Neoenergia, operado em parceria com a Ayesa, é uma arquitetura multi-cloud com predominância em AWS, estruturada com foco em padronização, governança e automação em larga escala.
-
-Na AWS, a organização segue um modelo baseado em plataformas e workloads. As plataformas são camadas estruturais criadas para suportar diferentes aplicações e serviços, como multiworkload, open platform (OP), data platform e IA. Dentro dessas plataformas, existem os workloads, que representam as aplicações ou sistemas de negócio implantados.
-
-Em plataformas como a multiworkload, existe o conceito de multiapps, onde múltiplas aplicações compartilham a mesma base de infraestrutura padronizada. Esse mesmo conceito também é aplicado em outras plataformas, como open platform e data platform, permitindo maior eficiência, reaproveitamento e padronização.
-
-As contas AWS são organizadas de forma estratégica, sendo segmentadas por plataforma (multiworkload, open, data, IA), ambiente (production e non-production) e finalidade (corporate, networks, retail, etc.). Com nomenclaturas padronizadas como: mwlcrnpd (multiworkload corporate non-production), opcrdefs-pro (open platform corporate defs production).
-
-Toda a infraestrutura é provisionada via Terraform, estruturado em três camadas: Modules (componentes reutilizáveis como EKS, VPC, EC2, RDS com governança embutida), Template (define como os módulos são combinados por tipo de plataforma) e Live (representa os ambientes reais, onde são aplicadas as variáveis específicas). O deploy de infraestrutura é feito via GitHub Actions, garantindo automação, versionamento e rastreabilidade.
-
-O deploy das aplicações segue um fluxo separado, sendo realizado via Jenkins, com as aplicações containerizadas e implantadas em EKS (Kubernetes gerenciado).
-
-Do ponto de vista operacional, inicialmente o modelo era mais restritivo: o time de operações atuava apenas na camada live, ajustando variáveis via custom.tfvars; o time de engenharia era responsável por alterações estruturais nos modules e templates.
-
-Com a evolução para a multiworkload versão 3.0, o modelo se tornou mais flexível e orientado a dados. Os templates passaram a suportar estruturas dinâmicas (maps e objects), permitindo que o próprio custom.tfvars defina recursos a serem criados via for_each. Assim, o time de operações ganhou autonomia para criar recursos diretamente via variáveis, desde que suportados pelos templates. Essa abordagem traz maior velocidade e autonomia, mantendo governança através de padrões bem definidos nos módulos e templates.
-"""
-
-_SYSTEM_INSTRUCTIONS = """Você é um assistente técnico especialista no ambiente cloud da Neoenergia/Ayesa. \
-Responda sempre em português brasileiro (pt-BR), independentemente do idioma da documentação ou da pergunta.
-
-Use o [CONTEXTO DO AMBIENTE] abaixo como conhecimento de fundo permanente sobre o ambiente. \
-Esse contexto é sempre verdadeiro e deve informar todas as respostas, mesmo quando não estiver explicitamente no bloco [CONTEXT].
-
-{environment}
+def _build_system_instructions() -> str:
+    """Build system prompt, optionally injecting domain context from settings."""
+    environment_section = (
+        f"\n{settings.generation_context}\n"
+        if settings.generation_context.strip()
+        else ""
+    )
+    return (
+        "Você é um assistente técnico especialista no ambiente cloud documentado abaixo. "
+        "Responda sempre em português brasileiro (pt-BR), independentemente do idioma da documentação ou da pergunta."
+        + environment_section
+        + """
 
 ## Postura e tom
 
 Você não é um buscador de documentos — você é um especialista que consultou a documentação e agora explica com suas próprias palavras.
 
 - **Explique, não copie**: sintetize o que a documentação diz em linguagem natural. Use frases como "na prática isso significa...", "o que isso quer dizer é...", "nesse modelo, o ideal é...".
-- **Conecte conceitos**: relacione o que foi perguntado com o contexto mais amplo do ambiente. Ex: se alguém pergunta sobre deploy, conecte com o fluxo Jenkins → EKS já documentado.
+- **Conecte conceitos**: relacione o que foi perguntado com o contexto mais amplo do ambiente.
 - **Dê recomendações quando fizer sentido**: se a documentação descreve um padrão, oriente o usuário sobre como seguir esse padrão na prática.
 - **Seja direto mas completo**: evite listas de bullet para tudo — prefira parágrafos curtos e fluidos quando a resposta for conceitual. Use bullets apenas para passos sequenciais ou listas de itens.
 - **Admita lacunas com clareza**: se algo não está documentado mas você pode inferir pelo padrão do ambiente, diga explicitamente: "A documentação não cobre isso diretamente, mas dado o padrão descrito, o esperado seria...".
 
 ## Regras inegociáveis
 
-1. Baseie-se sempre no [CONTEXT] e no [CONTEXTO DO AMBIENTE]. Não invente fatos, URLs ou dados técnicos específicos.
+1. Baseie-se sempre no [CONTEXT]. Não invente fatos, URLs ou dados técnicos específicos.
 2. Se nenhuma das fontes contiver informação semanticamente relacionada à pergunta, responda: "Esta informação não foi encontrada na documentação."
 3. Separe claramente o que é documentado do que é inferência sua. Use marcadores como "a documentação indica..." vs "minha interpretação é...".
 4. Ao final, inclua uma seção **Fontes:** listando os documentos e seções consultados:
    - [Título do Documento] > [Seção]
-""".format(environment=_ENVIRONMENT_CONTEXT)
+"""
+    )
+
+
+_SYSTEM_INSTRUCTIONS = _build_system_instructions()
 
 _USER_TEMPLATE = """[QUESTION]
 {question}
@@ -187,7 +171,7 @@ def _build_context(chunks: list[ChunkResult]) -> tuple[str, list[dict]]:
 
 
 @retry(
-    retry=retry_if_exception_type(ClientError),
+    retry=retry_if_exception_type((RateLimitError, APIError)),
     wait=wait_exponential(multiplier=1, min=2, max=60),
     stop=stop_after_attempt(4),
     before_sleep=before_sleep_log(logger, logging.WARNING),
@@ -195,30 +179,16 @@ def _build_context(chunks: list[ChunkResult]) -> tuple[str, list[dict]]:
 )
 async def _call_responses_api(user_message: str, conversation_history: list[dict]) -> str:
     """
-    Call Bedrock Converse API with retry logic.
-    Converts OpenAI-style history (content: str) to Bedrock format (content: list[block]).
+    Call the OpenAI Chat Completions API with retry logic.
     Returns the plain text answer.
     """
-    # Convert OpenAI-style history to Bedrock Converse format
-    bedrock_messages = []
-    for msg in conversation_history[-3:]:
-        bedrock_messages.append({
-            "role": msg["role"],
-            "content": [{"text": msg["content"]}],
-        })
-    bedrock_messages.append({
-        "role": "user",
-        "content": [{"text": user_message}],
-    })
+    messages = [{"role": "system", "content": _SYSTEM_INSTRUCTIONS}]
+    messages.extend(conversation_history[-settings.conversation_history_turns:])
+    messages.append({"role": "user", "content": user_message})
 
-    response = await asyncio.to_thread(
-        _get_client().converse,
-        modelId=settings.bedrock_llm_model,
-        system=[{"text": _SYSTEM_INSTRUCTIONS}],
-        messages=bedrock_messages,
-        inferenceConfig={
-            "maxTokens": 2048,
-            "temperature": 0.1,
-        },
+    response = await _client.chat.completions.create(
+        model=settings.openai_chat_model,
+        messages=messages,
+        temperature=settings.generation_temperature,
     )
-    return response["output"]["message"]["content"][0]["text"]
+    return response.choices[0].message.content

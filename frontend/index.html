@@ -320,11 +320,9 @@
       padding: .25rem 0 1rem;
     }
     .answer-text { font-size: 1.05rem; line-height: 1.9; color: var(--text); }
-    .typing-cursor {
-      color: var(--pink);
-      animation: blink .7s step-end infinite;
-      margin-left: 2px;
-      display: inline;
+    .answer-text.typing::after {
+      content: '▋'; color: var(--pink);
+      animation: blink .7s step-end infinite; margin-left: 2px;
     }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
 
@@ -622,7 +620,6 @@
   const LOADING_TEXT_INTERVAL_MS     = 1800;
   const TEXTAREA_MAX_HEIGHT_PX       = 180;
   const TYPEWRITER_CHAR_SPEED_MS     = 65;
-  const TYPEWRITER_ANSWER_SPEED_MS   = 16;
   const TYPEWRITER_ERASE_SPEED_MS    = 38;
   const TYPEWRITER_PREP_SPEED_MS     = 80;
   const TYPEWRITER_PAUSE_MS          = 120;
@@ -1000,30 +997,22 @@
 
   function typewriteText(element, text, onComplete) {
     element.innerHTML = '';
+    element.classList.add('typing');
     const words = text.split(' ');
     let wordIndex   = 0;
     let accumulated = '';
 
-    const CURSOR_HTML = '<span class="typing-cursor">▋</span>';
-
-    function renderWithCursor() {
-      const parsed = marked.parse(accumulated);
-      const lastClose = parsed.lastIndexOf('</');
-      element.innerHTML = lastClose !== -1
-        ? parsed.slice(0, lastClose) + CURSOR_HTML + parsed.slice(lastClose)
-        : parsed + CURSOR_HTML;
-    }
-
     function typeNextWord() {
       if (wordIndex >= words.length) {
+        element.classList.remove('typing');
         element.innerHTML = marked.parse(accumulated);
         if (onComplete) onComplete();
         return;
       }
       accumulated += (wordIndex === 0 ? '' : ' ') + words[wordIndex++];
-      renderWithCursor();
+      element.innerHTML = marked.parse(accumulated);
       scrollToBottom();
-      setTimeout(typeNextWord, TYPEWRITER_ANSWER_SPEED_MS);
+      setTimeout(typeNextWord, TYPEWRITER_CHAR_SPEED_MS);
     }
 
     typeNextWord();

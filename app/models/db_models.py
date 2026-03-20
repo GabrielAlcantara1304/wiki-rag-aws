@@ -18,6 +18,8 @@ import uuid
 from datetime import datetime
 
 from pgvector.sqlalchemy import Vector
+
+from app.config import settings
 from sqlalchemy import (
     DateTime,
     Float,
@@ -175,7 +177,7 @@ class Chunk(Base):
     # Vector type — dimensions configured in alembic migration to match
     # settings.openai_embedding_dimensions
     embedding: Mapped[list[float] | None] = mapped_column(
-        Vector(1024), nullable=True  # Titan Text v2 default dims
+        Vector(settings.openai_embedding_dimensions), nullable=True
     )
     previous_chunk_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),

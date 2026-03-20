@@ -25,7 +25,7 @@ down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
-VECTOR_DIMS = 1024  # Titan Text v2 default — must match settings.bedrock_embed_dimensions
+VECTOR_DIMS = 1536  # must match settings.openai_embedding_dimensions
 
 
 def upgrade() -> None:

@@ -1,12 +1,6 @@
 """
 Central configuration loaded from environment variables / .env file.
 All secrets and tunable parameters live here — never hardcoded elsewhere.
-
-AWS Version:
-  - LLM      : Amazon Bedrock — Claude 3 Haiku (cheapest Claude, good PT-BR)
-  - Embeddings: Amazon Bedrock — Titan Text v2 (multilingual, cheapest)
-  - Database  : Amazon RDS PostgreSQL + pgvector
-  - Secrets   : AWS Secrets Manager (prod) / .env (dev)
 """
 
 from pydantic import Field
@@ -15,24 +9,20 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # ------------------------------------------------------------------
-    # AWS / Bedrock
+    # OpenAI
     # ------------------------------------------------------------------
-    aws_region: str = Field(default="us-east-1", description="AWS region for Bedrock")
-
-    # LLM: Claude 3 Haiku — cheapest Claude on Bedrock, strong PT-BR support
-    bedrock_llm_model: str = Field(
-        default="anthropic.claude-3-haiku-20240307-v1:0",
-        description="Bedrock model ID for answer generation",
+    openai_api_key: str = Field(..., description="OpenAI API key")
+    openai_embedding_model: str = Field(
+        default="text-embedding-3-small",
+        description="Model used for chunk and query embeddings",
     )
-
-    # Embeddings: Titan Text v2 — multilingual, $0.00002/1K tokens
-    bedrock_embed_model: str = Field(
-        default="amazon.titan-embed-text-v2:0",
-        description="Bedrock model ID for embeddings",
+    openai_embedding_dimensions: int = Field(
+        default=1536,
+        description="Must match the chosen embedding model's output dims",
     )
-    bedrock_embed_dimensions: int = Field(
-        default=1024,
-        description="Titan v2 supports 256 | 512 | 1024 dims",
+    openai_chat_model: str = Field(
+        default="gpt-4o",
+        description="Model used for answer generation",
     )
 
     # ------------------------------------------------------------------
@@ -117,7 +107,7 @@ class Settings(BaseSettings):
     app_env: str = Field(default="development")
     log_level: str = Field(default="INFO")
 
-    model_config = {"env_file": ".env", "case_sensitive": False, "extra": "ignore"}
+    model_config = {"env_file": ".env", "case_sensitive": False}
 
 
 # Singleton — import this everywhere instead of re-creating

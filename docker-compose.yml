@@ -37,7 +37,9 @@ services:
     volumes:
       - wiki_repos:/tmp/wiki_repos
       - ./frontend:/app/frontend:ro
-      - ./documentosprocedimento:/app/documentosprocedimento:ro
+      - ./docs:/app/docs:ro
+      - ./aws_documentation.wiki:/app/aws_documentation.wiki:ro
+      - ./alembic:/app/alembic:ro
     restart: unless-stopped
 
 volumes:
