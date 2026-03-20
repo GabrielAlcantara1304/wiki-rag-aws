@@ -43,7 +43,7 @@ resource "aws_iam_role_policy_attachment" "lambda_s3" {
 # The zip file must be created at: lambda/docx_image_extractor.zip
 data "archive_file" "docx_extractor" {
   type        = "zip"
-  source_dir  = "${path.root}/../../../../lambda/docx_image_extractor"
+  source_dir  = "${path.module}/../../../lambda/docx_image_extractor"
   output_path = "${path.module}/docx_image_extractor.zip"
 }
 
