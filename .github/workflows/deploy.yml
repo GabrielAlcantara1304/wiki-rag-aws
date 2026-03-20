@@ -90,7 +90,6 @@ jobs:
         run: |
           kubectl apply -f k8s/namespace.yaml
 
-          sed -i "s|REPLACE_WITH_WIKI_RAG_ROLE_ARN|${WIKI_RAG_ROLE_ARN}|" k8s/serviceaccount.yaml
           kubectl apply -f k8s/serviceaccount.yaml
 
           # Inject Terraform outputs into the configmap before applying
