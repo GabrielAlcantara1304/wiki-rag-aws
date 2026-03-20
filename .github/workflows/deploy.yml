@@ -87,14 +87,28 @@ jobs:
       # ── 6. Apply base manifests (namespace, RBAC, config) ────────────────────
       - name: Apply base manifests
         run: |
-          # Inject Terraform outputs into the configmap before applying
-          sed -i "s|REPLACE_WITH_TERRAFORM_OUTPUT|${SQS_INGESTION_QUEUE_URL}|" k8s/configmap.yaml
-          sed -i "s|REPLACE_WITH_TERRAFORM_OUTPUT|${S3_BUCKET}|" k8s/configmap.yaml
-          sed -i "s|REPLACE_WITH_TERRAFORM_OUTPUT|${LAMBDA_DOCX_EXTRACTOR_NAME}|" k8s/configmap.yaml
-
           kubectl apply -f k8s/namespace.yaml
           kubectl apply -f k8s/serviceaccount.yaml
+
+          # Inject Terraform outputs into the configmap before applying
+          sed -i "s|REPLACE_WITH_TERRAFORM_OUTPUT|${SQS_INGESTION_QUEUE_URL}|" k8s/configmap.yaml
+          sed -i "s|REPLACE_WITH_S3_BUCKET|${S3_BUCKET}|" k8s/configmap.yaml
+          sed -i "s|REPLACE_WITH_LAMBDA_NAME|${LAMBDA_DOCX_EXTRACTOR_NAME}|" k8s/configmap.yaml
           kubectl apply -f k8s/configmap.yaml
+
+          # Fetch DB URLs from Secrets Manager and create/update k8s Secret
+          SECRET_JSON=$(aws secretsmanager get-secret-value \
+            --secret-id wiki-rag-dev/app \
+            --query SecretString \
+            --output text)
+          DB_URL=$(echo "$SECRET_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['database_url'])")
+          DB_URL_SYNC=$(echo "$SECRET_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['database_url_sync'])")
+
+          kubectl create secret generic wiki-rag-db-secret \
+            --from-literal=DATABASE_URL="$DB_URL" \
+            --from-literal=DATABASE_URL_SYNC="$DB_URL_SYNC" \
+            --namespace wiki-rag \
+            --dry-run=client -o yaml | kubectl apply -f -
 
       # ── 7. Run database migrations ────────────────────────────────────────────
       - name: Run Alembic migrations

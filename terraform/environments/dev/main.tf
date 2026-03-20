@@ -55,7 +55,7 @@ module "rds" {
   name                       = local.name
   vpc_id                     = module.vpc.vpc_id
   private_subnet_ids         = module.vpc.private_subnet_ids
-  allowed_security_group_ids = []
+  allowed_security_group_ids = [module.eks.cluster_security_group_id]
   db_password                = var.db_password
   instance_class             = var.rds_instance_class
   skip_final_snapshot        = true

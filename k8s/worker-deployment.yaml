@@ -32,6 +32,8 @@ spec:
           envFrom:
             - configMapRef:
                 name: wiki-rag-config
+            - secretRef:
+                name: wiki-rag-db-secret
 
           resources:
             requests:
