@@ -84,6 +84,27 @@ resource "aws_iam_role_policy_attachment" "ecr_push" {
   policy_arn = aws_iam_policy.ecr_push.arn
 }
 
+# ── Policy: Secrets Manager read ─────────────────────────────────────────────
+resource "aws_iam_policy" "secrets_read" {
+  name        = "${var.name}-ci-secrets-read"
+  description = "Allow GitHub Actions to read app secrets from Secrets Manager"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid      = "SecretsRead"
+      Effect   = "Allow"
+      Action   = ["secretsmanager:GetSecretValue"]
+      Resource = "arn:aws:secretsmanager:${var.aws_region}:${var.aws_account_id}:secret:${var.name}/app*"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "secrets_read" {
+  role       = aws_iam_role.github_actions.name
+  policy_arn = aws_iam_policy.secrets_read.arn
+}
+
 # ── Policy: EKS deploy ────────────────────────────────────────────────────────
 resource "aws_iam_policy" "eks_deploy" {
   name        = "${var.name}-ci-eks-deploy"
