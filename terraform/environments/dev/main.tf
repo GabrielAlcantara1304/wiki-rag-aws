@@ -129,6 +129,26 @@ module "bastion" {
   tags             = local.common_tags
 }
 
+# ── EKS Access Entries ────────────────────────────────────────────────────────
+resource "aws_eks_access_entry" "github_actions" {
+  cluster_name  = module.eks.cluster_name
+  principal_arn = module.ci.github_actions_role_arn
+  type          = "STANDARD"
+  tags          = local.common_tags
+}
+
+resource "aws_eks_access_policy_association" "github_actions_admin" {
+  cluster_name  = module.eks.cluster_name
+  principal_arn = module.ci.github_actions_role_arn
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+  access_scope {
+    type = "cluster"
+  }
+
+  depends_on = [aws_eks_access_entry.github_actions]
+}
+
 # ── CI / GitHub Actions OIDC ─────────────────────────────────────────────────
 module "ci" {
   source          = "../../modules/ci"

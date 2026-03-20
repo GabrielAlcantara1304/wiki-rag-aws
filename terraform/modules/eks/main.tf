@@ -31,6 +31,11 @@ resource "aws_eks_cluster" "this" {
     endpoint_public_access  = true  # set false after VPN/bastion is set up
   }
 
+  access_config {
+    authentication_mode                         = "API_AND_CONFIG_MAP"
+    bootstrap_cluster_creator_admin_permissions = true
+  }
+
   tags       = var.tags
   depends_on = [aws_iam_role_policy_attachment.cluster_policy]
 }
