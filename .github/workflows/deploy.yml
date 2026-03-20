@@ -38,6 +38,7 @@ env:
   SQS_INGESTION_QUEUE_URL:     ${{ vars.SQS_INGESTION_QUEUE_URL }}
   S3_BUCKET:                   ${{ vars.S3_BUCKET }}
   LAMBDA_DOCX_EXTRACTOR_NAME:  ${{ vars.LAMBDA_DOCX_EXTRACTOR_NAME }}
+  WIKI_RAG_ROLE_ARN:           ${{ vars.WIKI_RAG_ROLE_ARN }}
 
 jobs:
   deploy:
@@ -88,6 +89,8 @@ jobs:
       - name: Apply base manifests
         run: |
           kubectl apply -f k8s/namespace.yaml
+
+          sed -i "s|REPLACE_WITH_WIKI_RAG_ROLE_ARN|${WIKI_RAG_ROLE_ARN}|" k8s/serviceaccount.yaml
           kubectl apply -f k8s/serviceaccount.yaml
 
           # Inject Terraform outputs into the configmap before applying
