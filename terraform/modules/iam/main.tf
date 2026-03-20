@@ -1,6 +1,6 @@
 # ── IRSA: IAM Role for wiki-rag Service Account ──────────────────────────────
-# This role is assumed by the Kubernetes service account via OIDC federation.
-# It grants access to Bedrock — no long-lived credentials needed in the pod.
+# Assumed by the Kubernetes pod via OIDC federation (no long-lived credentials).
+# Grants Secrets Manager access only — OpenAI calls go directly over the internet.
 
 data "aws_iam_policy_document" "assume_role" {
   statement {
@@ -32,39 +32,11 @@ resource "aws_iam_role" "wiki_rag" {
   tags               = var.tags
 }
 
-# ── Bedrock access policy ────────────────────────────────────────────────────
-resource "aws_iam_policy" "bedrock" {
-  name        = "${var.name}-bedrock-access"
-  description = "Allow wiki-rag to invoke Bedrock models (LLM + Embeddings)"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "InvokeBedrockModels"
-        Effect = "Allow"
-        Action = [
-          "bedrock:InvokeModel",
-          "bedrock:InvokeModelWithResponseStream",
-        ]
-        Resource = [
-          "arn:aws:bedrock:${var.aws_region}::foundation-model/anthropic.claude-3-haiku-20240307-v1:0",
-          "arn:aws:bedrock:${var.aws_region}::foundation-model/amazon.titan-embed-text-v2:0",
-        ]
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "bedrock" {
-  role       = aws_iam_role.wiki_rag.name
-  policy_arn = aws_iam_policy.bedrock.arn
-}
-
-# ── Secrets Manager read policy (optional — used in prod for DB credentials) ─
+# ── Secrets Manager read policy ───────────────────────────────────────────────
+# Allows the pod to read DATABASE_URL and OPENAI_API_KEY at startup.
 resource "aws_iam_policy" "secrets" {
   name        = "${var.name}-secrets-read"
-  description = "Allow wiki-rag to read its secrets from Secrets Manager"
+  description = "Allow wiki-rag pod to read its secrets from Secrets Manager"
 
   policy = jsonencode({
     Version = "2012-10-17"

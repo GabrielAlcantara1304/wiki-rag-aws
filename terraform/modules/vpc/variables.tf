@@ -29,3 +29,8 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "region" {
+  description = "AWS region — required for VPC endpoint service names"
+  type        = string
+}

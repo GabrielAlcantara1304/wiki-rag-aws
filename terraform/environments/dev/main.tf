@@ -41,6 +41,7 @@ module "vpc" {
   azs             = var.availability_zones
   private_subnets = var.private_subnet_cidrs
   public_subnets  = var.public_subnet_cidrs
+  region          = var.aws_region
   tags            = local.common_tags
 }
 
@@ -104,4 +105,29 @@ module "secrets" {
     database_url_sync = "postgresql://${var.db_username}:${var.db_password}@${module.rds.endpoint}/${var.db_name}"
     openai_api_key    = var.openai_api_key
   }
+}
+
+# ── Bastion ───────────────────────────────────────────────────────────────────
+module "bastion" {
+  source = "../../modules/bastion"
+
+  name             = local.name
+  vpc_id           = module.vpc.vpc_id
+  public_subnet_id = module.vpc.public_subnet_ids[0]
+  vpc_cidr         = var.vpc_cidr
+  tags             = local.common_tags
+}
+
+# ── CI / GitHub Actions OIDC ─────────────────────────────────────────────────
+module "ci" {
+  source = "../../modules/ci"
+
+  name            = local.name
+  aws_account_id  = data.aws_caller_identity.current.account_id
+  aws_region      = var.aws_region
+  github_org      = var.github_org
+  github_repo     = var.github_repo
+  ecr_repo_arns   = [module.ecr.repository_arn]
+  eks_cluster_arn = module.eks.cluster_arn
+  tags            = local.common_tags
 }

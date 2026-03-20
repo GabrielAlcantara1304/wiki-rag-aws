@@ -1,0 +1,48 @@
+# Kubernetes Job that runs Alembic migrations before the new deployment rolls out.
+# The CI pipeline applies this job and waits for it to complete before updating
+# the Deployment image tag, ensuring the schema is always up-to-date.
+#
+# Usage (from deploy workflow):
+#   kubectl apply -f k8s/job-migrate.yaml
+#   kubectl wait --for=condition=complete job/wiki-rag-migrate -n wiki-rag --timeout=120s
+#   kubectl delete job wiki-rag-migrate -n wiki-rag   # clean up after success
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: wiki-rag-migrate
+  namespace: wiki-rag
+  labels:
+    app: wiki-rag
+    component: migration
+spec:
+  ttlSecondsAfterFinished: 300   # auto-delete 5 min after completion
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app: wiki-rag
+        component: migration
+    spec:
+      serviceAccountName: wiki-rag   # same IRSA role — needs Secrets Manager access
+      restartPolicy: Never
+
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+
+      containers:
+        - name: migrate
+          image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/wiki-rag-api:IMAGE_TAG
+          command: ["alembic", "upgrade", "head"]
+
+          envFrom:
+            - configMapRef:
+                name: wiki-rag-config
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

@@ -61,3 +61,15 @@ variable "openai_api_key" {
   sensitive = true
   description = "OpenAI API key — stored in Secrets Manager, never in state plaintext"
 }
+
+variable "github_org" {
+  type        = string
+  description = "GitHub organization or username owning the repo"
+  default     = "GabrielAlcantara1304"
+}
+
+variable "github_repo" {
+  type        = string
+  description = "GitHub repository name (without org)"
+  default     = "wiki-rag-aws"
+}

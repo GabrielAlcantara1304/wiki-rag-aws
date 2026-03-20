@@ -86,3 +86,57 @@ resource "aws_route_table_association" "private" {
   subnet_id      = aws_subnet.private[count.index].id
   route_table_id = aws_route_table.private.id
 }
+
+# ── VPC Endpoints ────────────────────────────────────────────────────────────
+# Interface endpoints keep AWS API traffic inside the VPC (no NAT needed for
+# ECR pulls, Secrets Manager reads, CloudWatch writes, and STS token exchange).
+# OpenAI calls still go through the NAT Gateway (no private endpoint available).
+
+resource "aws_security_group" "vpc_endpoints" {
+  name        = "${var.name}-vpce"
+  description = "Allow HTTPS from within the VPC to AWS interface endpoints"
+  vpc_id      = aws_vpc.this.id
+
+  ingress {
+    description = "HTTPS from VPC"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = [var.cidr]
+  }
+
+  tags = merge(var.tags, { Name = "${var.name}-vpce" })
+}
+
+locals {
+  interface_endpoints = toset([
+    "ecr.api",
+    "ecr.dkr",
+    "secretsmanager",
+    "sts",
+    "logs",
+  ])
+}
+
+resource "aws_vpc_endpoint" "interface" {
+  for_each = local.interface_endpoints
+
+  vpc_id              = aws_vpc.this.id
+  service_name        = "com.amazonaws.${var.region}.${each.key}"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = aws_subnet.private[*].id
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled = true
+
+  tags = merge(var.tags, { Name = "${var.name}-vpce-${each.key}" })
+}
+
+# S3 gateway endpoint (free — used by ECR for layer downloads)
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id            = aws_vpc.this.id
+  service_name      = "com.amazonaws.${var.region}.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = [aws_route_table.private.id]
+
+  tags = merge(var.tags, { Name = "${var.name}-vpce-s3" })
+}
