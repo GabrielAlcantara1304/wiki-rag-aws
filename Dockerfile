@@ -13,9 +13,13 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY . .
+# Create non-root user (uid 1000) so libraries like torch can resolve the username
+RUN addgroup --gid 1000 appuser \
+ && adduser --uid 1000 --gid 1000 --no-create-home --disabled-password --gecos "" appuser
 
-# Run database migrations then start the server.
-# The entrypoint handles waiting for DB readiness via healthcheck in compose.
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+# Copy application code
+COPY --chown=appuser:appuser . .
+
+USER 1000
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
