@@ -150,11 +150,9 @@ jobs:
             -n wiki-rag \
             --timeout=300s
 
-      # ── 9. Apply ingress (idempotent) ─────────────────────────────────────────
-      - name: Apply ingress
-        run: |
-          kubectl apply -f k8s/ingress.yaml
-          kubectl apply -f k8s/hpa.yaml
+      # ── 9. Apply HPA ──────────────────────────────────────────────────────────
+      - name: Apply HPA
+        run: kubectl apply -f k8s/hpa.yaml
 
       # ── 10. Summary ───────────────────────────────────────────────────────────
       - name: Deployment summary
