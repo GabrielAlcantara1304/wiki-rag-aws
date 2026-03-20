@@ -1,0 +1,52 @@
+# Ingestion worker — polls SQS and processes file ingestion jobs async.
+# Same Docker image as the API, different entrypoint.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wiki-rag-worker
+  namespace: wiki-rag
+  labels:
+    app: wiki-rag-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wiki-rag-worker
+  template:
+    metadata:
+      labels:
+        app: wiki-rag-worker
+    spec:
+      serviceAccountName: wiki-rag
+
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      containers:
+        - name: worker
+          image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/wiki-rag-api:latest
+          command: ["python", "-m", "app.ingestion.worker"]
+
+          envFrom:
+            - configMapRef:
+                name: wiki-rag-config
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+
+      volumes:
+        - name: tmp
+          emptyDir: {}
+
+      terminationGracePeriodSeconds: 60   # give worker time to finish current message

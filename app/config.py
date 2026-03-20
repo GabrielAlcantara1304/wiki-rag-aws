@@ -9,30 +9,39 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # ------------------------------------------------------------------
-    # OpenAI
+    # AWS
     # ------------------------------------------------------------------
-    openai_api_key: str = Field(..., description="OpenAI API key")
-    openai_embedding_model: str = Field(
-        default="text-embedding-3-small",
-        description="Model used for chunk and query embeddings",
+    aws_region: str = Field(
+        default="us-east-1",
+        description="AWS region for Bedrock, SQS, S3, Secrets Manager",
     )
-    openai_embedding_dimensions: int = Field(
-        default=1536,
-        description="Must match the chosen embedding model's output dims",
+
+    # ------------------------------------------------------------------
+    # Bedrock — Embeddings
+    # ------------------------------------------------------------------
+    bedrock_embed_model: str = Field(
+        default="amazon.titan-embed-text-v2:0",
+        description="Bedrock model ID for chunk and query embeddings",
     )
-    openai_chat_model: str = Field(
-        default="gpt-4o",
-        description="Model used for answer generation",
+    bedrock_embed_dimensions: int = Field(
+        default=1024,
+        description="Output dimensions for Titan Embeddings V2 (256 | 512 | 1024)",
+    )
+
+    # ------------------------------------------------------------------
+    # Bedrock — Chat / Generation
+    # ------------------------------------------------------------------
+    bedrock_chat_model: str = Field(
+        default="anthropic.claude-3-5-haiku-20241022-v1:0",
+        description="Bedrock model ID for answer generation",
     )
 
     # ------------------------------------------------------------------
     # Database
     # ------------------------------------------------------------------
-    # Async URL (asyncpg) — used by SQLAlchemy at runtime
     database_url: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/wiki_rag"
     )
-    # Sync URL (psycopg2) — used by Alembic for migrations
     database_url_sync: str = Field(
         default="postgresql://postgres:postgres@localhost:5432/wiki_rag"
     )
@@ -40,65 +49,48 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------
     # Ingestion
     # ------------------------------------------------------------------
-    wiki_repo_url: str = Field(
+    wiki_repo_url: str = Field(default="", description="Git URL of the wiki to ingest")
+    wiki_clone_dir: str = Field(default="/tmp/wiki_repos")
+
+    # ------------------------------------------------------------------
+    # Async ingestion via SQS
+    # ------------------------------------------------------------------
+    sqs_ingestion_queue_url: str = Field(
         default="",
-        description="Git URL of the wiki repository to ingest",
+        description="SQS queue URL for async folder ingestion jobs",
     )
-    wiki_clone_dir: str = Field(
-        default="/tmp/wiki_repos",
-        description="Host path where repos are cloned",
+    s3_bucket: str = Field(
+        default="",
+        description="S3 bucket for uploaded files and extracted images",
+    )
+    lambda_docx_extractor_name: str = Field(
+        default="",
+        description="Lambda function name/ARN for extracting images from .docx",
     )
 
     # ------------------------------------------------------------------
     # Retrieval
     # ------------------------------------------------------------------
-    retrieval_top_k: int = Field(
-        default=10,
-        description="Number of top chunks returned by similarity search",
-    )
-    retrieval_similarity_threshold: float = Field(
-        default=0.5,
-        description="Cosine similarity floor — results below this are discarded",
-    )
-    context_window_chunks: int = Field(
-        default=2,
-        description="How many neighboring chunks to add around each matched chunk",
-    )
+    retrieval_top_k: int = Field(default=10)
+    retrieval_similarity_threshold: float = Field(default=0.5)
+    context_window_chunks: int = Field(default=2)
 
     # ------------------------------------------------------------------
     # Chunking
     # ------------------------------------------------------------------
-    max_chunk_tokens: int = Field(
-        default=800,
-        description="Hard upper limit for a single chunk (tokens)",
-    )
-    chunk_overlap_tokens: int = Field(
-        default=100,
-        description="Overlap appended from previous chunk for continuity",
-    )
+    max_chunk_tokens: int = Field(default=800)
+    chunk_overlap_tokens: int = Field(default=100)
 
     # ------------------------------------------------------------------
     # Generation
     # ------------------------------------------------------------------
-    generation_temperature: float = Field(
-        default=0.1,
-        description="LLM temperature — lower means more deterministic/factual answers",
-    )
-    conversation_history_turns: int = Field(
-        default=3,
-        description="Number of previous conversation turns injected into the prompt",
-    )
-    gap_similarity_threshold: float = Field(
-        default=0.45,
-        description="Max similarity below which a question is flagged as a knowledge gap",
-    )
-    max_images_per_response: int = Field(
-        default=3,
-        description="Maximum number of images attached to a single answer",
-    )
+    generation_temperature: float = Field(default=0.1)
+    conversation_history_turns: int = Field(default=3)
+    gap_similarity_threshold: float = Field(default=0.45)
+    max_images_per_response: int = Field(default=3)
     generation_context: str = Field(
         default="",
-        description="Optional domain-specific background context injected into every prompt",
+        description="Optional domain-specific context injected into every prompt",
     )
 
     # ------------------------------------------------------------------
@@ -108,12 +100,10 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO")
     cors_origins: list[str] = Field(
         default=[],
-        description="Allowed CORS origins in production (e.g. https://wiki.example.com)",
+        description="Allowed CORS origins in production",
     )
 
     model_config = {"env_file": ".env", "case_sensitive": False}
 
 
-# Singleton — import this everywhere instead of re-creating
 settings = Settings()
-    # NOTA: este campo é adicionado aqui pois o arquivo original não contém o cors_origins

@@ -177,7 +177,7 @@ class Chunk(Base):
     # Vector type — dimensions configured in alembic migration to match
     # settings.openai_embedding_dimensions
     embedding: Mapped[list[float] | None] = mapped_column(
-        Vector(settings.openai_embedding_dimensions), nullable=True
+        Vector(settings.bedrock_embed_dimensions), nullable=True
     )
     previous_chunk_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),

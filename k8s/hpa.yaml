@@ -1,0 +1,27 @@
+# Horizontal Pod Autoscaler for the API — scales on CPU to handle many concurrent users.
+# Worker scales implicitly based on SQS queue depth (see KEDA for queue-based scaling).
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: wiki-rag-api
+  namespace: wiki-rag
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: wiki-rag
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 75

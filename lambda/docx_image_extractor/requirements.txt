@@ -1,0 +1,2 @@
+python-docx==1.1.2
+# boto3 is provided by the Lambda runtime — do not include

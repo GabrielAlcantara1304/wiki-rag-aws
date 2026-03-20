@@ -34,7 +34,10 @@ permissions:
 env:
   AWS_REGION:        ${{ vars.AWS_REGION || 'us-east-1' }}
   ECR_REPOSITORY:    ${{ vars.ECR_REPOSITORY }}
-  EKS_CLUSTER_NAME:  ${{ vars.EKS_CLUSTER_NAME }}
+  EKS_CLUSTER_NAME:            ${{ vars.EKS_CLUSTER_NAME }}
+  SQS_INGESTION_QUEUE_URL:     ${{ vars.SQS_INGESTION_QUEUE_URL }}
+  S3_BUCKET:                   ${{ vars.S3_BUCKET }}
+  LAMBDA_DOCX_EXTRACTOR_NAME:  ${{ vars.LAMBDA_DOCX_EXTRACTOR_NAME }}
 
 jobs:
   deploy:
@@ -84,6 +87,11 @@ jobs:
       # ── 6. Apply base manifests (namespace, RBAC, config) ────────────────────
       - name: Apply base manifests
         run: |
+          # Inject Terraform outputs into the configmap before applying
+          sed -i "s|REPLACE_WITH_TERRAFORM_OUTPUT|${SQS_INGESTION_QUEUE_URL}|" k8s/configmap.yaml
+          sed -i "s|REPLACE_WITH_TERRAFORM_OUTPUT|${S3_BUCKET}|" k8s/configmap.yaml
+          sed -i "s|REPLACE_WITH_TERRAFORM_OUTPUT|${LAMBDA_DOCX_EXTRACTOR_NAME}|" k8s/configmap.yaml
+
           kubectl apply -f k8s/namespace.yaml
           kubectl apply -f k8s/serviceaccount.yaml
           kubectl apply -f k8s/configmap.yaml

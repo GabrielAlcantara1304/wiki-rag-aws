@@ -1,41 +1,41 @@
 """
-Embedding generation via OpenAI text-embedding-3-* models.
+Embedding generation via AWS Bedrock — Titan Text Embeddings V2.
 
-Design:
-  - Async client for non-blocking I/O inside FastAPI / ingestion pipeline.
-  - Batch API calls (up to 2048 inputs per request) to minimise round-trips.
-  - Exponential back-off with tenacity for rate-limit / transient errors.
-  - Dimensions validated against settings to catch misconfiguration early.
+Uses asyncio.run_in_executor to keep the async interface while calling
+the synchronous boto3 SDK. Parallelises individual embed calls for
+throughput (Titan V2 processes one text per API call).
+
+Dimensions: 1024 (default for Titan V2) — must match the vector column
+in the DB schema and settings.bedrock_embed_dimensions.
 """
 
 import asyncio
+import json
 import logging
+from functools import partial
 
+import boto3
 import tiktoken
-from openai import AsyncOpenAI, RateLimitError, APIError, BadRequestError
+from botocore.exceptions import ClientError
 from tenacity import (
+    before_sleep_log,
     retry,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    before_sleep_log,
 )
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-# OpenAI recommends batches of ≤2048; we stay well under to keep latency low
-_BATCH_SIZE = 512
 _ENCODING = tiktoken.get_encoding("cl100k_base")
+_MAX_EMBED_TOKENS = 8000  # Titan V2 limit is 8192 tokens
 
-_client = AsyncOpenAI(api_key=settings.openai_api_key)
+_client = boto3.client("bedrock-runtime", region_name=settings.aws_region)
 
-# Hard limit for text-embedding-3-small (8192 tokens)
-_MAX_EMBED_TOKENS = 8000  # slightly under limit for safety
 
 def _truncate_to_limit(text: str) -> str:
-    """Truncate text to fit within the embedding model's token limit."""
     tokens = _ENCODING.encode(text)
     if len(tokens) <= _MAX_EMBED_TOKENS:
         return text
@@ -48,41 +48,17 @@ def _truncate_to_limit(text: str) -> str:
 # ---------------------------------------------------------------------------
 
 async def embed_texts(texts: list[str]) -> list[list[float]]:
-    """
-    Generate embeddings for a list of strings.
-
-    Handles batching transparently — caller can pass any number of texts.
-
-    Args:
-        texts: Non-empty list of strings to embed.
-
-    Returns:
-        Parallel list of embedding vectors (same order as input).
-    """
+    """Embed a list of texts. Parallelises calls to Bedrock Titan V2."""
     if not texts:
         return []
-
-    results: list[list[float]] = [None] * len(texts)  # type: ignore[list-item]
-
-    # Split into batches and run them concurrently
-    batch_coros = []
-    batch_slices = []
-    for start in range(0, len(texts), _BATCH_SIZE):
-        batch = texts[start : start + _BATCH_SIZE]
-        batch_slices.append((start, start + len(batch)))
-        batch_coros.append(_embed_batch(batch))
-
-    batch_results = await asyncio.gather(*batch_coros)
-
-    for (start, end), embeddings in zip(batch_slices, batch_results):
-        results[start:end] = embeddings
-
-    logger.debug("Embedded %d texts in %d batches", len(texts), len(batch_coros))
-    return results
+    tasks = [_embed_single(text) for text in texts]
+    results = await asyncio.gather(*tasks)
+    logger.debug("Embedded %d texts via Bedrock Titan V2", len(texts))
+    return list(results)
 
 
 async def embed_query(text: str) -> list[float]:
-    """Convenience wrapper for embedding a single query string."""
+    """Convenience wrapper for a single query string."""
     vectors = await embed_texts([text])
     return vectors[0]
 
@@ -92,22 +68,29 @@ async def embed_query(text: str) -> list[float]:
 # ---------------------------------------------------------------------------
 
 @retry(
-    retry=retry_if_exception_type((RateLimitError,)),  # BadRequestError não deve ser retryed
-    wait=wait_exponential(multiplier=1, min=2, max=60),
-    stop=stop_after_attempt(6),
+    retry=retry_if_exception_type(ClientError),
+    wait=wait_exponential(multiplier=1, min=1, max=30),
+    stop=stop_after_attempt(4),
     before_sleep=before_sleep_log(logger, logging.WARNING),
     reraise=True,
 )
-async def _embed_batch(texts: list[str]) -> list[list[float]]:
-    """
-    Single API call for one batch.  Decorated with retry for resilience.
-    Texts are truncated to _MAX_EMBED_TOKENS before sending.
-    """
-    texts = [_truncate_to_limit(t) for t in texts]
-    response = await _client.embeddings.create(
-        model=settings.openai_embedding_model,
-        input=texts,
-        dimensions=settings.openai_embedding_dimensions,
+async def _embed_single(text: str) -> list[float]:
+    """Embed one text via Bedrock (async via executor)."""
+    truncated = _truncate_to_limit(text)
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, partial(_invoke_titan, truncated))
+
+
+def _invoke_titan(text: str) -> list[float]:
+    body = json.dumps({
+        "inputText": text,
+        "dimensions": settings.bedrock_embed_dimensions,
+        "normalize": True,
+    })
+    response = _client.invoke_model(
+        modelId=settings.bedrock_embed_model,
+        body=body,
+        contentType="application/json",
+        accept="application/json",
     )
-    # The API returns results in the same order as input
-    return [item.embedding for item in sorted(response.data, key=lambda x: x.index)]
+    return json.loads(response["body"].read())["embedding"]

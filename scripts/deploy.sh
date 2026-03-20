@@ -41,6 +41,13 @@ ECR_URL=$(terraform -chdir="${TF_DIR}" output -raw ecr_repository_url)
 ROLE_ARN=$(terraform -chdir="${TF_DIR}" output -raw wiki_rag_role_arn)
 SECRET_NAME=$(terraform -chdir="${TF_DIR}" output -raw secret_name)
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+SQS_QUEUE_URL=$(terraform -chdir="${TF_DIR}" output -raw sqs_ingestion_queue_url)
+S3_BUCKET=$(terraform -chdir="${TF_DIR}" output -raw s3_bucket)
+LAMBDA_NAME=$(terraform -chdir="${TF_DIR}" output -raw lambda_docx_extractor_name)
+
+echo "  SQS Queue: ${SQS_QUEUE_URL}"
+echo "  S3 Bucket: ${S3_BUCKET}"
+echo "  Lambda   : ${LAMBDA_NAME}" 
 
 echo "  Cluster : ${CLUSTER_NAME}"
 echo "  ECR     : ${ECR_URL}"
@@ -78,6 +85,10 @@ echo "[5/5] Aplicando manifests Kubernetes..."
 
 # Atualiza valores dinâmicos nos manifests antes de aplicar
 sed -i "s|ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/wiki-rag-api:latest|${FULL_IMAGE}|g" k8s/deployment.yaml
+sed -i "s|ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/wiki-rag-api:latest|${FULL_IMAGE}|g" k8s/worker-deployment.yaml
+sed -i "s|REPLACE_WITH_TERRAFORM_OUTPUT|${SQS_QUEUE_URL}|" k8s/configmap.yaml
+sed -i "s|REPLACE_WITH_TERRAFORM_OUTPUT|${S3_BUCKET}|" k8s/configmap.yaml
+sed -i "s|REPLACE_WITH_TERRAFORM_OUTPUT|${LAMBDA_NAME}|" k8s/configmap.yaml
 sed -i "s|arn:aws:iam::ACCOUNT_ID:role/wiki-rag-dev-wiki-rag|${ROLE_ARN}|g" k8s/serviceaccount.yaml
 sed -i "s|wiki-rag-dev/app|${SECRET_NAME}|g" k8s/configmap.yaml
 
@@ -87,6 +98,8 @@ kubectl apply -f k8s/configmap.yaml
 kubectl apply -f k8s/deployment.yaml
 kubectl apply -f k8s/service.yaml
 kubectl apply -f k8s/ingress.yaml
+kubectl apply -f k8s/worker-deployment.yaml
+kubectl apply -f k8s/hpa.yaml
 
 echo ""
 echo "Aguardando pods ficarem prontos..."

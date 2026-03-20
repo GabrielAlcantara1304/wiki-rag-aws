@@ -10,8 +10,10 @@ psycopg2-binary==2.9.10
 pgvector==0.3.2
 alembic==1.13.3
 
-# OpenAI
-openai==1.51.0
+# AWS (Bedrock, SQS, S3, Lambda, Secrets Manager)
+boto3==1.35.0
+
+# Token counting (used for chunking, compatible with Claude tokenizer estimates)
 tiktoken==0.8.0
 
 # Git operations

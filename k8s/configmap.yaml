@@ -7,20 +7,29 @@ data:
   APP_ENV: "production"
   LOG_LEVEL: "INFO"
   AWS_REGION: "us-east-1"
-  OPENAI_EMBEDDING_MODEL: "text-embedding-3-small"
-  OPENAI_EMBEDDING_DIMENSIONS: "1536"
-  OPENAI_CHAT_MODEL: "gpt-4o"
-  WIKI_CLONE_DIR: "/tmp/wiki_clones"
+
+  # Bedrock models
+  BEDROCK_EMBED_MODEL: "amazon.titan-embed-text-v2:0"
+  BEDROCK_EMBED_DIMENSIONS: "1024"
+  BEDROCK_CHAT_MODEL: "anthropic.claude-3-5-haiku-20241022-v1:0"
+
+  # Retrieval
   RETRIEVAL_TOP_K: "10"
   RETRIEVAL_SIMILARITY_THRESHOLD: "0.5"
   CONTEXT_WINDOW_CHUNKS: "2"
+
+  # Chunking
   MAX_CHUNK_TOKENS: "800"
   CHUNK_OVERLAP_TOKENS: "100"
+
+  # Generation
   GENERATION_TEMPERATURE: "0.1"
   CONVERSATION_HISTORY_TURNS: "3"
-  GAP_SIMILARITY_THRESHOLD: "0.45"
-  MAX_IMAGES_PER_RESPONSE: "3"
-  # CORS_ORIGINS: '["https://wiki.example.com"]'   # uncomment and set your domain
-  # GENERATION_CONTEXT: ""                          # optional domain context for the LLM
-  # Terraform output secret_name goes here — app fetches DB credentials + OPENAI_API_KEY at startup
+
+  # Async ingestion — values populated by deploy.sh from terraform outputs
+  SQS_INGESTION_QUEUE_URL: "REPLACE_WITH_TERRAFORM_OUTPUT"
+  S3_BUCKET: "REPLACE_WITH_TERRAFORM_OUTPUT"
+  LAMBDA_DOCX_EXTRACTOR_NAME: "REPLACE_WITH_TERRAFORM_OUTPUT"
+
+  # Secrets Manager secret name — app fetches DB credentials at startup
   AWS_SECRET_NAME: "wiki-rag-dev/app"

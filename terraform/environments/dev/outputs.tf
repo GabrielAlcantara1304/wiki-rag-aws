@@ -28,3 +28,15 @@ output "github_actions_role_arn" {
   description = "Set as AWS_ROLE_ARN secret in GitHub repository settings"
   value       = module.ci.github_actions_role_arn
 }
+
+output "s3_bucket" {
+  value = module.s3.bucket_name
+}
+
+output "sqs_ingestion_queue_url" {
+  value = module.sqs.queue_url
+}
+
+output "lambda_docx_extractor_name" {
+  value = module.lambda.function_name
+}

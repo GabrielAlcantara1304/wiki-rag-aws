@@ -1,5 +1,5 @@
 """
-Answer generation via the OpenAI Responses API.
+Answer generation via AWS Bedrock Converse API — Claude 3.5 Haiku.
 
 The generator:
   1. Builds a context block from retrieved chunks + their neighbours.
@@ -7,37 +7,36 @@ The generator:
   3. Requires inline citations (document title + section).
   4. Returns the answer text plus a structured list of sources.
 
-Why the Responses API (not chat.completions)?
-  - Simpler input handling (instructions + input, no role dicts needed).
-  - output_text shorthand — cleaner code.
-  - Stateless by default — each call is independent, which is what we want.
+Authentication: IRSA (pod IAM role) — no API keys needed.
 """
 
+import asyncio
 import logging
+from functools import partial
 
-from openai import AsyncOpenAI
+import boto3
+from botocore.exceptions import ClientError
 from tenacity import (
+    before_sleep_log,
     retry,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    before_sleep_log,
 )
-from openai import RateLimitError, APIError
 
 from app.config import settings
 from app.retrieval.retriever import ChunkResult
 
 logger = logging.getLogger(__name__)
 
-_client = AsyncOpenAI(api_key=settings.openai_api_key)
+_client = boto3.client("bedrock-runtime", region_name=settings.aws_region)
+
 
 # ---------------------------------------------------------------------------
 # Prompt templates
 # ---------------------------------------------------------------------------
 
 def _build_system_instructions() -> str:
-    """Build system prompt, optionally injecting domain context from settings."""
     environment_section = (
         f"\n{settings.generation_context}\n"
         if settings.generation_context.strip()
@@ -53,18 +52,18 @@ def _build_system_instructions() -> str:
 
 Você não é um buscador de documentos — você é um especialista que consultou a documentação e agora explica com suas próprias palavras.
 
-- **Explique, não copie**: sintetize o que a documentação diz em linguagem natural. Use frases como "na prática isso significa...", "o que isso quer dizer é...", "nesse modelo, o ideal é...".
+- **Explique, não copie**: sintetize o que a documentação diz em linguagem natural.
 - **Conecte conceitos**: relacione o que foi perguntado com o contexto mais amplo do ambiente.
 - **Dê recomendações quando fizer sentido**: se a documentação descreve um padrão, oriente o usuário sobre como seguir esse padrão na prática.
-- **Seja direto mas completo**: evite listas de bullet para tudo — prefira parágrafos curtos e fluidos quando a resposta for conceitual. Use bullets apenas para passos sequenciais ou listas de itens.
-- **Admita lacunas com clareza**: se algo não está documentado mas você pode inferir pelo padrão do ambiente, diga explicitamente: "A documentação não cobre isso diretamente, mas dado o padrão descrito, o esperado seria...".
+- **Seja direto mas completo**: prefira parágrafos curtos e fluidos quando a resposta for conceitual. Use bullets apenas para passos sequenciais.
+- **Admita lacunas com clareza**: se algo não está documentado mas você pode inferir, diga: "A documentação não cobre isso diretamente, mas dado o padrão descrito, o esperado seria...".
 
 ## Regras inegociáveis
 
 1. Baseie-se sempre no [CONTEXT]. Não invente fatos, URLs ou dados técnicos específicos.
-2. Se nenhuma das fontes contiver informação semanticamente relacionada à pergunta, responda: "Esta informação não foi encontrada na documentação."
-3. Separe claramente o que é documentado do que é inferência sua. Use marcadores como "a documentação indica..." vs "minha interpretação é...".
-4. Ao final, inclua uma seção **Fontes:** listando os documentos e seções consultados:
+2. Se nenhuma fonte contiver informação relacionada, responda: "Esta informação não foi encontrada na documentação."
+3. Separe o que é documentado do que é inferência. Use "a documentação indica..." vs "minha interpretação é...".
+4. Ao final, inclua **Fontes:** listando os documentos e seções consultados:
    - [Título do Documento] > [Seção]
 """
     )
@@ -89,35 +88,15 @@ async def generate_answer(
     chunks: list[ChunkResult],
     conversation_history: list[dict] | None = None,
 ) -> tuple[str, list[dict]]:
-    """
-    Generate a grounded answer for the given question using the retrieved chunks.
-
-    Args:
-        question: The user's original question.
-        chunks:   Top-k chunks from the retriever (including context expansions).
-
-    Returns:
-        Tuple of (answer_text, sources_list) where sources_list contains
-        dicts with keys: document, section, snippet.
-    """
     if not chunks:
-        return (
-            "I don't have enough information in the provided documentation to answer this question.",
-            [],
-        )
+        return ("I don't have enough information in the provided documentation to answer this question.", [])
 
     context_block, sources = _build_context(chunks)
-    user_message = _USER_TEMPLATE.format(
-        question=question,
-        context=context_block,
-    )
+    user_message = _USER_TEMPLATE.format(question=question, context=context_block)
 
-    answer = await _call_responses_api(user_message, conversation_history or [])
+    answer = await _call_bedrock_converse(user_message, conversation_history or [])
 
-    logger.info(
-        "Generated answer for '%s' using %d source chunks",
-        question[:60], len(chunks),
-    )
+    logger.info("Generated answer for '%s' using %d source chunks", question[:60], len(chunks))
     return answer, sources
 
 
@@ -126,17 +105,6 @@ async def generate_answer(
 # ---------------------------------------------------------------------------
 
 def _build_context(chunks: list[ChunkResult]) -> tuple[str, list[dict]]:
-    """
-    Assemble the context block that is injected into the prompt.
-
-    Each entry is rendered as:
-
-        --- [Document Title] / [Section] ---
-        <chunk text>
-        [+ neighbouring chunks if any]
-
-    Also builds the sources list for the API response.
-    """
     seen_ids: set = set()
     context_parts: list[str] = []
     sources: list[dict] = []
@@ -149,16 +117,13 @@ def _build_context(chunks: list[ChunkResult]) -> tuple[str, list[dict]]:
         section_label = chunk.section_heading or "Introduction"
         header = f"--- {chunk.document_title} / {section_label} ---"
 
-        # Include context chunks (neighbours) inline, ordered by chunk_index
         all_texts = [chunk.chunk_text]
         for ctx in sorted(chunk.context_chunks, key=lambda c: c.chunk_index):
             if ctx.chunk_id not in seen_ids:
                 all_texts.append(ctx.chunk_text)
                 seen_ids.add(ctx.chunk_id)
 
-        block = header + "\n" + "\n\n".join(all_texts)
-        context_parts.append(block)
-
+        context_parts.append(header + "\n" + "\n\n".join(all_texts))
         sources.append({
             "document": chunk.document_title,
             "section": section_label,
@@ -171,24 +136,36 @@ def _build_context(chunks: list[ChunkResult]) -> tuple[str, list[dict]]:
 
 
 @retry(
-    retry=retry_if_exception_type((RateLimitError, APIError)),
+    retry=retry_if_exception_type(ClientError),
     wait=wait_exponential(multiplier=1, min=2, max=60),
     stop=stop_after_attempt(4),
     before_sleep=before_sleep_log(logger, logging.WARNING),
     reraise=True,
 )
-async def _call_responses_api(user_message: str, conversation_history: list[dict]) -> str:
-    """
-    Call the OpenAI Chat Completions API with retry logic.
-    Returns the plain text answer.
-    """
-    messages = [{"role": "system", "content": _SYSTEM_INSTRUCTIONS}]
-    messages.extend(conversation_history[-settings.conversation_history_turns:])
-    messages.append({"role": "user", "content": user_message})
-
-    response = await _client.chat.completions.create(
-        model=settings.openai_chat_model,
-        messages=messages,
-        temperature=settings.generation_temperature,
+async def _call_bedrock_converse(user_message: str, conversation_history: list[dict]) -> str:
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(
+        None,
+        partial(_invoke_converse, user_message, conversation_history),
     )
-    return response.choices[0].message.content
+
+
+def _invoke_converse(user_message: str, conversation_history: list[dict]) -> str:
+    messages = []
+    for msg in conversation_history[-settings.conversation_history_turns:]:
+        messages.append({
+            "role": msg["role"],
+            "content": [{"text": msg["content"]}],
+        })
+    messages.append({"role": "user", "content": [{"text": user_message}]})
+
+    response = _client.converse(
+        modelId=settings.bedrock_chat_model,
+        system=[{"text": _SYSTEM_INSTRUCTIONS}],
+        messages=messages,
+        inferenceConfig={
+            "temperature": settings.generation_temperature,
+            "maxTokens": 4096,
+        },
+    )
+    return response["output"]["message"]["content"][0]["text"]
