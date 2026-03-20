@@ -129,17 +129,19 @@ jobs:
 
           kubectl delete job wiki-rag-migrate -n wiki-rag --ignore-not-found
 
-      # ── 8. Update deployment image ───────────────────────────────────────────
+      # ── 8. Apply deployments and services ────────────────────────────────────
       - name: Deploy new image
         env:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           FULL_IMAGE="${ECR_REPOSITORY}:${IMAGE_TAG}"
+          PLACEHOLDER="ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/wiki-rag-api:latest"
 
-          # Patch the deployment to the new image (triggers rolling update)
-          kubectl set image deployment/wiki-rag \
-            api="${FULL_IMAGE}" \
-            -n wiki-rag
+          # Apply deployment and worker with the correct image tag
+          sed "s|${PLACEHOLDER}|${FULL_IMAGE}|g" k8s/deployment.yaml | kubectl apply -f -
+          sed "s|${PLACEHOLDER}|${FULL_IMAGE}|g" k8s/worker-deployment.yaml | kubectl apply -f -
+
+          kubectl apply -f k8s/service.yaml
 
           kubectl rollout status deployment/wiki-rag \
             -n wiki-rag \
@@ -147,7 +149,9 @@ jobs:
 
       # ── 9. Apply ingress (idempotent) ─────────────────────────────────────────
       - name: Apply ingress
-        run: kubectl apply -f k8s/ingress.yaml
+        run: |
+          kubectl apply -f k8s/ingress.yaml
+          kubectl apply -f k8s/hpa.yaml
 
       # ── 10. Summary ───────────────────────────────────────────────────────────
       - name: Deployment summary
