@@ -18,10 +18,12 @@ Error handling: if a single file fails, we log and continue so one
 corrupt page doesn't abort the entire ingestion run.
 """
 
+import hashlib
 import logging
 import uuid
 from pathlib import Path
 
+import boto3
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.chunking.chunker import ChunkData, chunk_section
@@ -139,6 +141,27 @@ def _parse_file(abs_path: Path, path_str: str) -> ParsedDocument:
     return parse_markdown_file(path_str, raw_markdown)
 
 
+def _upload_content_to_s3(repo_url: str, path_str: str, content: str) -> str | None:
+    """Upload raw document content to S3. Returns the S3 key, or None if not configured."""
+    if not settings.s3_bucket:
+        return None
+    try:
+        repo_hash = hashlib.sha256(repo_url.encode()).hexdigest()[:12]
+        safe_path = path_str.replace("\\", "/").lstrip("/")
+        s3_key = f"documents/{repo_hash}/{safe_path}"
+        boto3.client("s3", region_name=settings.aws_region).put_object(
+            Bucket=settings.s3_bucket,
+            Key=s3_key,
+            Body=content.encode("utf-8"),
+            ContentType="text/plain; charset=utf-8",
+        )
+        logger.debug("Uploaded document to s3://%s/%s", settings.s3_bucket, s3_key)
+        return s3_key
+    except Exception as exc:
+        logger.warning("Failed to upload document to S3: %s", exc)
+        return None
+
+
 async def _store_document(
     db: AsyncSession,
     repo_url: str,
@@ -147,14 +170,14 @@ async def _store_document(
     local_path: Path,
     rel_path: Path,
 ) -> Document:
-    """Persist the Document record and flush to obtain its ID."""
+    """Upload content to S3, persist Document metadata, flush to obtain its ID."""
     commit_hash = get_file_commit_hash(local_path, rel_path)
+    s3_key = _upload_content_to_s3(repo_url, path_str, parsed.raw_markdown)
     document = Document(
         repo=repo_url,
         path=path_str,
         title=parsed.title,
-        raw_markdown=parsed.raw_markdown,
-        rendered_text=parsed.rendered_text,
+        s3_key=s3_key,
         commit_hash=commit_hash,
     )
     db.add(document)

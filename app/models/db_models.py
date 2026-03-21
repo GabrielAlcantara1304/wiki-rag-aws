@@ -38,8 +38,8 @@ from app.database import Base
 
 class Document(Base):
     """
-    Stores the FULL raw markdown and rendered plain text of every wiki page.
-    This is the source of truth — chunks are derived from it, not a replacement.
+    Stores document metadata. Full content is stored in S3 (s3_key).
+    Chunks with embeddings are derived from the content and stored in RDS.
     """
 
     __tablename__ = "documents"
@@ -63,13 +63,9 @@ class Document(Base):
         String(500), nullable=False,
         comment="Inferred from first H1 heading or filename",
     )
-    raw_markdown: Mapped[str] = mapped_column(
-        Text, nullable=False,
-        comment="Verbatim .md file content — never modified after ingestion",
-    )
-    rendered_text: Mapped[str] = mapped_column(
-        Text, nullable=False,
-        comment="Plain text extracted from markdown (used for display)",
+    s3_key: Mapped[str | None] = mapped_column(
+        String(1000), nullable=True,
+        comment="S3 key for the full document content (s3://{bucket}/{s3_key})",
     )
     last_modified: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

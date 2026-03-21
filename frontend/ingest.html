@@ -418,7 +418,7 @@
   uploadBtn.addEventListener('click', async () => {
     if (!selectedFiles.length) return;
     uploadBtn.disabled = true;
-    showLoading(uploadResult, 'Enviando e processando arquivos…');
+    showLoading(uploadResult, 'Enviando arquivos para a fila de processamento…');
 
     const fd = new FormData();
     selectedFiles.forEach(f => fd.append('files', f));
@@ -469,14 +469,26 @@
 
   function showSuccess(el, data) {
     el.className = 'result-box success';
-    el.innerHTML = `
-      <strong>✓ ${data.message}</strong>
-      <div class="result-stats">
-        <div class="stat"><div class="stat-val">${data.processed}</div><div class="stat-label">Processados</div></div>
-        <div class="stat"><div class="stat-val">${data.skipped}</div><div class="stat-label">Ignorados</div></div>
-        <div class="stat"><div class="stat-val">${data.failed}</div><div class="stat-label">Erros</div></div>
-      </div>
-    `;
+    if (data.job_id) {
+      // Async response: files queued for worker processing
+      el.innerHTML = `
+        <strong>✓ ${escHtml(data.message)}</strong>
+        <div style="margin-top:.6rem;display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem">
+          <div class="stat"><div class="stat-val">${data.queued}</div><div class="stat-label">Enfileirados</div></div>
+          <div class="stat"><div class="stat-val" style="font-size:.75rem;color:var(--muted)">${escHtml(data.job_id.slice(0,8))}…</div><div class="stat-label">Job ID</div></div>
+        </div>
+      `;
+    } else {
+      // Sync response: local path ingest
+      el.innerHTML = `
+        <strong>✓ ${escHtml(data.message)}</strong>
+        <div class="result-stats">
+          <div class="stat"><div class="stat-val">${data.processed}</div><div class="stat-label">Processados</div></div>
+          <div class="stat"><div class="stat-val">${data.skipped}</div><div class="stat-label">Ignorados</div></div>
+          <div class="stat"><div class="stat-val">${data.failed}</div><div class="stat-label">Erros</div></div>
+        </div>
+      `;
+    }
   }
 
   function showError(el, msg) {
