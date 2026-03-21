@@ -11,7 +11,7 @@ data:
   # Bedrock models
   BEDROCK_EMBED_MODEL: "amazon.titan-embed-text-v2:0"
   BEDROCK_EMBED_DIMENSIONS: "1024"
-  BEDROCK_CHAT_MODEL: "anthropic.claude-3-5-haiku-20241022-v1:0"
+  BEDROCK_CHAT_MODEL: "us.anthropic.claude-3-5-haiku-20241022-v1:0"
 
 
   # Retrieval

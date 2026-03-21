@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     # Bedrock — Chat / Generation
     # ------------------------------------------------------------------
     bedrock_chat_model: str = Field(
-        default="anthropic.claude-3-5-haiku-20241022-v1:0",
+        default="us.anthropic.claude-3-5-haiku-20241022-v1:0",
         description="Bedrock model ID for answer generation",
     )
 
