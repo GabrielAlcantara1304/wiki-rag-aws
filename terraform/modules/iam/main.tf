@@ -49,7 +49,8 @@ resource "aws_iam_policy" "bedrock" {
       ]
       Resource = [
         "arn:aws:bedrock:${var.aws_region}::foundation-model/amazon.titan-embed-text-v2:0",
-        "arn:aws:bedrock:${var.aws_region}::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0",
+        "arn:aws:bedrock:${var.aws_region}::foundation-model/amazon.nova-lite-v1:0",
+        "arn:aws:bedrock:${var.aws_region}::foundation-model/amazon.nova-micro-v1:0",
         "arn:aws:bedrock:${var.aws_region}:${var.aws_account_id}:inference-profile/us.anthropic.claude-3-5-haiku-20241022-v1:0",
         "arn:aws:bedrock:*::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0",
       ]
