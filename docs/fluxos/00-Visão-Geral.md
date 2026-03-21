@@ -29,6 +29,11 @@ Sistema de perguntas e respostas sobre documentação interna, rodando na AWS co
 - [[04-QA-Retrieval]] — Como uma pergunta vira uma resposta
 - [[05-CI-CD]] — Pipeline de deploy automatizado
 - [[06-Armazenamento]] — O que fica no S3 vs RDS
+- [[07-Infraestrutura-Terraform]] — Módulos Terraform e o que cada um cria
+- [[08-Kubernetes]] — Manifests K8s, HPA, IRSA
+- [[09-Troubleshooting]] — Erros encontrados e como foram resolvidos
+- [[10-Monitoramento]] — Logs, métricas, custo e como parar tudo
+- [[11-Evidências]] — Checklist de prints para validar o sistema
 
 ## Diagrama macro
 
