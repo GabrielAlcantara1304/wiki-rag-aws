@@ -120,14 +120,22 @@ async def _ingest_file(
     repo_url: str,
     local_path: Path,
     rel_path: Path,
+    commit_hash: str | None = None,
 ) -> None:
-    """Ingest (or re-ingest) a single file. Deletes any existing record first."""
-    path_str = str(rel_path)
+    """Ingest (or re-ingest) a single file. Deletes any existing record first.
+
+    commit_hash: if provided (e.g. from SQS message), used directly.
+                 Otherwise computed from the local git repo.
+    """
+    path_str = str(rel_path).replace("\\", "/")
     abs_path = local_path / rel_path
+
+    if commit_hash is None:
+        commit_hash = get_file_commit_hash(local_path, rel_path)
 
     await delete_document_by_path(db, repo_url, path_str)
     parsed = _parse_file(abs_path, path_str)
-    document = await _store_document(db, repo_url, path_str, parsed, local_path, rel_path)
+    document = await _store_document(db, repo_url, path_str, parsed, commit_hash)
     all_chunks, all_chunk_texts = await _store_sections_and_chunks(db, document, parsed)
     await _embed_and_assign(all_chunks, all_chunk_texts, path_str)
     _store_assets(db, document, parsed)
@@ -167,11 +175,9 @@ async def _store_document(
     repo_url: str,
     path_str: str,
     parsed: ParsedDocument,
-    local_path: Path,
-    rel_path: Path,
+    commit_hash: str | None = None,
 ) -> Document:
     """Upload content to S3, persist Document metadata, flush to obtain its ID."""
-    commit_hash = get_file_commit_hash(local_path, rel_path)
     s3_key = _upload_content_to_s3(repo_url, path_str, parsed.raw_markdown)
     document = Document(
         repo=repo_url,

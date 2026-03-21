@@ -444,7 +444,7 @@
     const btn = document.getElementById('localBtn');
     const result = document.getElementById('localResult');
     btn.disabled = true;
-    showLoading(result, 'Processando pasta…');
+    showLoading(result, 'Enfileirando arquivos para processamento…');
     try {
       const res = await fetch(`${API}/ingest`, {
         method: 'POST',
@@ -471,10 +471,12 @@
     el.className = 'result-box success';
     if (data.job_id) {
       // Async response: files queued for worker processing
+      const cols = data.skipped != null ? 3 : 2;
       el.innerHTML = `
         <strong>✓ ${escHtml(data.message)}</strong>
-        <div style="margin-top:.6rem;display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem">
+        <div style="margin-top:.6rem;display:grid;grid-template-columns:repeat(${cols},1fr);gap:.5rem">
           <div class="stat"><div class="stat-val">${data.queued}</div><div class="stat-label">Enfileirados</div></div>
+          ${data.skipped != null ? `<div class="stat"><div class="stat-val">${data.skipped}</div><div class="stat-label">Ignorados</div></div>` : ''}
           <div class="stat"><div class="stat-val" style="font-size:.75rem;color:var(--muted)">${escHtml(data.job_id.slice(0,8))}…</div><div class="stat-label">Job ID</div></div>
         </div>
       `;

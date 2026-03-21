@@ -54,12 +54,19 @@ _LAMBDA_NAME   = os.environ.get("LAMBDA_DOCX_EXTRACTOR_NAME", "")
 # ---------------------------------------------------------------------------
 
 async def _process_message(body: dict, tmpdir: Path) -> None:
-    file_key  = body["file_key"]
-    repo_url  = body["repo_url"]
-    file_name = body.get("file_name", Path(file_key).name)
+    file_key    = body["file_key"]
+    repo_url    = body["repo_url"]
+    file_name   = body.get("file_name", Path(file_key).name)
+    # rel_path preserves directory structure within the repo (e.g. "docs/Home.md").
+    # Falls back to file_name for uploads that have no subdirectory.
+    rel_path    = body.get("rel_path", file_name)
+    commit_hash = body.get("commit_hash") or None
 
-    local_file = tmpdir / file_name
-    logger.info("Downloading s3://%s/%s", _S3_BUCKET, file_key)
+    # Download preserving relative directory structure so _ingest_file sees the
+    # same path hierarchy that the pipeline would expect from a git checkout.
+    local_file = tmpdir / rel_path
+    local_file.parent.mkdir(parents=True, exist_ok=True)
+    logger.info("Downloading s3://%s/%s → %s", _S3_BUCKET, file_key, local_file)
     _s3.download_file(_S3_BUCKET, file_key, str(local_file))
 
     # For .docx files, extract embedded images via Lambda before ingesting
@@ -67,10 +74,10 @@ async def _process_message(body: dict, tmpdir: Path) -> None:
         _extract_docx_images(file_key, tmpdir)
 
     async with AsyncSessionLocal() as db:
-        await _ingest_file(db, repo_url, tmpdir, Path(file_name))
+        await _ingest_file(db, repo_url, tmpdir, Path(rel_path), commit_hash=commit_hash)
         await db.commit()
 
-    logger.info("Ingested: %s", file_name)
+    logger.info("Ingested: %s", rel_path)
 
 
 def _extract_docx_images(file_key: str, tmpdir: Path) -> None:
