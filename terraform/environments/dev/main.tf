@@ -129,7 +129,37 @@ module "bastion" {
   tags             = local.common_tags
 }
 
+# ── Allow bastion → EKS API (port 443) ───────────────────────────────────────
+resource "aws_vpc_security_group_ingress_rule" "eks_from_bastion" {
+  security_group_id            = module.eks.cluster_security_group_id
+  referenced_security_group_id = module.bastion.security_group_id
+  from_port                    = 443
+  to_port                      = 443
+  ip_protocol                  = "tcp"
+  description                  = "Allow bastion to reach EKS API endpoint"
+  tags                         = local.common_tags
+}
+
 # ── EKS Access Entries ────────────────────────────────────────────────────────
+resource "aws_eks_access_entry" "bastion" {
+  cluster_name  = module.eks.cluster_name
+  principal_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/wiki-rag-dev-bastion"
+  type          = "STANDARD"
+  tags          = local.common_tags
+}
+
+resource "aws_eks_access_policy_association" "bastion_admin" {
+  cluster_name  = module.eks.cluster_name
+  principal_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/wiki-rag-dev-bastion"
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+  access_scope {
+    type = "cluster"
+  }
+
+  depends_on = [aws_eks_access_entry.bastion]
+}
+
 resource "aws_eks_access_entry" "github_actions" {
   cluster_name  = module.eks.cluster_name
   principal_arn = module.ci.github_actions_role_arn
