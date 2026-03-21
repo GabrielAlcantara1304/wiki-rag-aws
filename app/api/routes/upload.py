@@ -74,7 +74,11 @@ async def upload_files(files: list[UploadFile] = File(...)) -> dict:
 
     for f in files:
         content = await f.read()
-        file_key = f"uploads/{job_id}/{f.filename}"
+        # f.filename may be a relative path (e.g. "docs/Home.md") when the
+        # browser sends webkitRelativePath as the multipart filename.
+        rel_path = f.filename.replace("\\", "/").lstrip("/")
+        file_name = Path(rel_path).name
+        file_key = f"uploads/{job_id}/{rel_path}"
         try:
             _get_s3().put_object(
                 Bucket=settings.s3_bucket,
@@ -86,12 +90,13 @@ async def upload_files(files: list[UploadFile] = File(...)) -> dict:
                 MessageBody=json.dumps({
                     "file_key": file_key,
                     "repo_url": f"upload:{job_id}",
-                    "file_name": f.filename,
-                    "job_id": job_id,
+                    "file_name": file_name,
+                    "rel_path":  rel_path,
+                    "job_id":    job_id,
                 }),
             )
             queued += 1
-            logger.info("Queued %s for ingestion (job=%s)", f.filename, job_id)
+            logger.info("Queued %s for ingestion (job=%s)", rel_path, job_id)
         except Exception as exc:
             logger.error("Failed to queue %s: %s", f.filename, exc)
 

@@ -296,11 +296,24 @@
           <span class="card-title">Upload de arquivos</span>
         </div>
         <div class="card-body">
+          <!-- hidden inputs — triggered by buttons below -->
+          <input type="file" id="fileInput" multiple accept=".md,.docx,.txt" style="display:none" />
+          <input type="file" id="folderInput" webkitdirectory multiple style="display:none" />
+
           <div class="dropzone" id="dropzone">
-            <input type="file" id="fileInput" multiple accept=".md,.docx,.txt" />
             <div class="dropzone-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
-            <div class="dropzone-text">Arraste arquivos aqui ou clique para selecionar</div>
-            <div class="dropzone-hint">Suporta .md, .docx e .txt · Múltiplos arquivos permitidos</div>
+            <div class="dropzone-text">Arraste arquivos ou pastas aqui</div>
+            <div class="dropzone-hint">Suporta .md, .docx e .txt · Subpastas incluídas automaticamente</div>
+            <div style="display:flex;gap:.6rem;justify-content:center;margin-top:1rem">
+              <button class="btn btn-secondary" type="button" id="pickFilesBtn" style="font-size:.75rem;padding:.45em .9em">
+                <svg style="width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                Selecionar arquivos
+              </button>
+              <button class="btn btn-secondary" type="button" id="pickFolderBtn" style="font-size:.75rem;padding:.45em .9em">
+                <svg style="width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                Selecionar pasta
+              </button>
+            </div>
           </div>
 
           <div class="file-list" id="fileList"></div>
@@ -366,42 +379,94 @@
 <script>
   const API = '';
 
-  // ── Upload de arquivos ─────────────────────────────────────────────────────
-  const dropzone   = document.getElementById('dropzone');
-  const fileInput  = document.getElementById('fileInput');
-  const fileList   = document.getElementById('fileList');
-  const uploadBtn  = document.getElementById('uploadBtn');
+  // ── Upload de arquivos / pastas ────────────────────────────────────────────
+  const dropzone     = document.getElementById('dropzone');
+  const fileInput    = document.getElementById('fileInput');
+  const folderInput  = document.getElementById('folderInput');
+  const fileList     = document.getElementById('fileList');
+  const uploadBtn    = document.getElementById('uploadBtn');
   const uploadResult = document.getElementById('uploadResult');
 
+  // Each entry: { file: File, path: string }  — path is the relative path used as S3 key
   let selectedFiles = [];
 
+  const ALLOWED = new Set(['md', 'docx', 'txt']);
+
+  // ── Drag & drop ────────────────────────────────────────────────────────────
   dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
   dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
-  dropzone.addEventListener('drop', e => {
-    e.preventDefault(); dropzone.classList.remove('dragover');
-    addFiles([...e.dataTransfer.files]);
+  dropzone.addEventListener('drop', async e => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    const entries = [...e.dataTransfer.items]
+      .map(item => item.webkitGetAsEntry && item.webkitGetAsEntry())
+      .filter(Boolean);
+    const collected = [];
+    await Promise.all(entries.map(entry => traverseEntry(entry, '', collected)));
+    addEntries(collected);
   });
-  fileInput.addEventListener('change', () => addFiles([...fileInput.files]));
 
-  function addFiles(files) {
-    files.forEach(f => {
-      const ext = f.name.split('.').pop().toLowerCase();
-      if (!['md','docx','txt'].includes(ext)) return;
-      if (selectedFiles.find(x => x.name === f.name)) return;
-      selectedFiles.push(f);
+  // Recursively walk a FileSystemEntry tree
+  async function traverseEntry(entry, prefix, out) {
+    if (entry.isFile) {
+      await new Promise(resolve => {
+        entry.file(file => {
+          out.push({ file, path: prefix + file.name });
+          resolve();
+        });
+      });
+    } else if (entry.isDirectory) {
+      const reader = entry.createReader();
+      await new Promise(resolve => {
+        const readAll = () => {
+          reader.readEntries(async batch => {
+            if (!batch.length) { resolve(); return; }
+            await Promise.all(batch.map(e => traverseEntry(e, prefix + entry.name + '/', out)));
+            readAll(); // readEntries returns max 100 at a time
+          });
+        };
+        readAll();
+      });
+    }
+  }
+
+  // ── File/folder picker buttons ─────────────────────────────────────────────
+  document.getElementById('pickFilesBtn').addEventListener('click', () => fileInput.click());
+  document.getElementById('pickFolderBtn').addEventListener('click', () => folderInput.click());
+
+  fileInput.addEventListener('change', () => {
+    addEntries([...fileInput.files].map(f => ({ file: f, path: f.name })));
+    fileInput.value = '';
+  });
+
+  folderInput.addEventListener('change', () => {
+    addEntries([...folderInput.files].map(f => ({
+      file: f,
+      path: f.webkitRelativePath || f.name,
+    })));
+    folderInput.value = '';
+  });
+
+  // ── Shared helpers ─────────────────────────────────────────────────────────
+  function addEntries(entries) {
+    entries.forEach(({ file, path }) => {
+      const ext = path.split('.').pop().toLowerCase();
+      if (!ALLOWED.has(ext)) return;
+      if (selectedFiles.find(x => x.path === path)) return; // dedupe by full path
+      selectedFiles.push({ file, path });
     });
     renderFileList();
   }
 
   function renderFileList() {
     fileList.innerHTML = '';
-    selectedFiles.forEach((f, i) => {
+    selectedFiles.forEach(({ file, path }, i) => {
       const item = document.createElement('div');
       item.className = 'file-item';
       item.innerHTML = `
         <svg viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
-        <span class="file-name">${escHtml(f.name)}</span>
-        <span class="file-size">${(f.size/1024).toFixed(0)} KB</span>
+        <span class="file-name" title="${escHtml(path)}">${escHtml(path)}</span>
+        <span class="file-size">${(file.size/1024).toFixed(0)} KB</span>
         <button class="file-remove" data-i="${i}">✕</button>
       `;
       fileList.appendChild(item);
@@ -418,10 +483,11 @@
   uploadBtn.addEventListener('click', async () => {
     if (!selectedFiles.length) return;
     uploadBtn.disabled = true;
-    showLoading(uploadResult, 'Enviando arquivos para a fila de processamento…');
+    showLoading(uploadResult, `Enviando ${selectedFiles.length} arquivo(s) para a fila…`);
 
     const fd = new FormData();
-    selectedFiles.forEach(f => fd.append('files', f));
+    // Pass relative path as filename so the backend preserves folder structure
+    selectedFiles.forEach(({ file, path }) => fd.append('files', file, path));
 
     try {
       const res = await fetch(`${API}/upload`, { method: 'POST', body: fd });
