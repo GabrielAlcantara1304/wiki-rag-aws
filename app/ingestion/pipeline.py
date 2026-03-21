@@ -41,6 +41,10 @@ from app.parsing.docx_parser import parse_docx_file
 
 logger = logging.getLogger(__name__)
 
+# Sentinel: distinguishes "caller didn't pass commit_hash → compute from git"
+# from "caller explicitly passed None → no git repo available, store NULL".
+_UNSET = object()
+
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -120,17 +124,19 @@ async def _ingest_file(
     repo_url: str,
     local_path: Path,
     rel_path: Path,
-    commit_hash: str | None = None,
+    commit_hash: object = _UNSET,
 ) -> None:
     """Ingest (or re-ingest) a single file. Deletes any existing record first.
 
-    commit_hash: if provided (e.g. from SQS message), used directly.
-                 Otherwise computed from the local git repo.
+    commit_hash:
+      _UNSET (default) — compute from git (used by run_ingestion with a real repo).
+      None             — no git repo available (worker flow); stored as NULL.
+      str              — use the provided hash directly (passed via SQS message).
     """
     path_str = str(rel_path).replace("\\", "/")
     abs_path = local_path / rel_path
 
-    if commit_hash is None:
+    if commit_hash is _UNSET:
         commit_hash = get_file_commit_hash(local_path, rel_path)
 
     await delete_document_by_path(db, repo_url, path_str)
